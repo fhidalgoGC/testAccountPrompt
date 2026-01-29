@@ -1,0 +1,43 @@
+Objetivo: Crear una plataforma web para que contadores gestionen y auditen archivos XML (facturas) subidos por clientes para trámites de devolución de impuestos.
+
+1. Módulo de Vista General (Dashboard):
+
+Tabla de Gestión: Mostrar una lista de todos los contribuyentes. Cada fila debe incluir: RFC, Nombre del Cliente, ID del Proceso Activo, Fecha de la última carga y un "Semáforo de Estado" (Ej: Pendiente de Revisión, Incompleto, Corregido, Finalizado).
+
+Navegación: Al hacer clic en el RFC, el sistema debe llevar a una página de Expediente Integral.
+
+2. Módulo de Expediente e Historial:
+
+Perfil del Cliente: Mostrar los datos maestros del usuario (RFC, Régimen, Contacto).
+
+Línea de Vida de Procesos: Listar de forma cronológica todos los procesos de devolución que el usuario ha iniciado. Un usuario puede tener varios procesos (ej. Ejercicio 2024, Complementaria Mayo, etc.).
+
+Acceso a Detalle: Al seleccionar un Proceso específico, entrar a la Mesa de Auditoría.
+
+3. Módulo de Mesa de Auditoría (Funcionalidad Central):
+
+Control de Cargas (Entregas): Dentro de un mismo proceso, el sistema debe registrar cada vez que el usuario sube archivos desde la app como una "Entrega" (Carga #1, Carga #2). No se deben borrar las anteriores.
+
+Lógica de Consolidación y Deduplicación: * El sistema debe identificar archivos repetidos mediante su UUID (folio fiscal).
+
+Si un usuario sube el mismo archivo en dos cargas distintas, el sistema solo debe considerar uno para el cálculo.
+
+Gestión de Archivos para el Contador:
+
+Botón Descargar Todo: Generar un solo archivo .zip que contenga el universo total de XMLs únicos acumulados en ese proceso.
+
+Descarga de Papel de Trabajo: Botón para bajar el archivo Excel generado por el sistema con los cálculos automáticos.
+
+Sistema de Feedback (Comunicación App-Web):
+
+El contador debe tener un panel para cambiar el estado del proceso.
+
+Si el contador marca "Faltan Datos", debe abrirse un campo obligatorio de "Comentarios para el Cliente". Este texto debe viajar a la App móvil para que el usuario sepa exactamente qué XML adicional subir.
+
+4. Reglas de Flujo:
+
+Cuando el contador descarga el material, el estado debe cambiar automáticamente a "En Revisión".
+
+Cuando el contador aprueba, el proceso se cierra y se bloquean nuevas subidas de archivos para ese ID de proceso.
+
+Si hay una nueva carga de archivos por parte del usuario, el contador debe recibir una alerta visual de "Nueva Información Disponible".
