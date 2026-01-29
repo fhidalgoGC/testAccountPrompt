@@ -26,10 +26,11 @@ Preferred communication style: Simple, everyday language.
 - **Production**: Static file serving from built assets
 
 ### Data Layer
-- **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Schema Location**: `shared/schema.ts` (shared between client and server)
-- **Validation**: Zod schemas generated from Drizzle schemas via drizzle-zod
-- **Current State**: Using in-memory storage (`MemStorage` class) with PostgreSQL schema defined for future migration
+- **Current State**: Frontend-only demo using React Context for simulated data (no backend API calls)
+- **Mock Data Provider**: `client/src/lib/mock-data.tsx` - Provides simulated CRUD operations for all entities
+- **Schema Location**: `shared/schema.ts` - TypeScript types and enums (ProcessStatus)
+- **Validation**: Zod schemas for form validation
+- **Sample Data**: 4 taxpayers with various processes, uploads, and XML files pre-loaded
 
 ### Key Data Models
 - **Taxpayers**: Client information (RFC, name, regime, contact details)
