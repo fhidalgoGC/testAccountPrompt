@@ -109,13 +109,18 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-// Audit trail entry for tracking process state changes
+// Audit trail entry for tracking process state changes and uploads
+export type AuditAction = "status_change" | "upload" | "document_request";
+
 export interface AuditLogEntry {
   id: string;
   processId: string;
-  previousStatus: string;
-  newStatus: string;
+  action: AuditAction;
+  previousStatus: string | null;
+  newStatus: string | null;
   feedbackComment: string | null;
+  uploadedFiles: string[] | null;
+  requestedDocTypes: string[] | null;
   createdAt: Date;
 }
 

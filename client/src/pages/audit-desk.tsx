@@ -18,6 +18,7 @@ import {
   MessageSquare,
   X,
   FileQuestion,
+  UploadCloud,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data";
 import { ProcessStatus, type ProcessStatusType } from "@shared/schema";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function AuditDesk() {
   const [, params] = useRoute("/processes/:id");
@@ -70,6 +71,7 @@ export default function AuditDesk() {
   const [comment, setComment] = useState("");
   const [expandedUploads, setExpandedUploads] = useState<Set<string>>(new Set());
   const [selectedDocTypes, setSelectedDocTypes] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const documentTypes = [
     "Facturas de Ingreso",
@@ -97,7 +99,7 @@ export default function AuditDesk() {
     });
   };
 
-  const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog } = useMockData();
+  const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog, simulateUpload, getRequestedDocTypes } = useMockData();
 
   const processDetail = processId ? getProcessDetail(processId) : undefined;
 
@@ -113,18 +115,11 @@ export default function AuditDesk() {
       return;
     }
 
-    let fullComment = "";
-    if (selectedDocTypes.size > 0) {
-      fullComment += "Documentos faltantes: " + Array.from(selectedDocTypes).join(", ") + ".";
-    }
-    if (comment.trim()) {
-      fullComment += (fullComment ? "\n" : "") + comment;
-    }
-
     updateProcessStatus(
       processId,
       newStatus,
-      newStatus === ProcessStatus.INCOMPLETE && fullComment ? fullComment : undefined
+      newStatus === ProcessStatus.INCOMPLETE && comment.trim() ? comment : undefined,
+      newStatus === ProcessStatus.INCOMPLETE ? Array.from(selectedDocTypes) : undefined
     );
 
     toast({
@@ -156,6 +151,17 @@ export default function AuditDesk() {
       title: "Descarga simulada",
       description: "En producción, aquí se descargaría el papel de trabajo en Excel.",
     });
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!processId || !event.target.files || event.target.files.length === 0) return;
+    const fileNames = Array.from(event.target.files).map((f) => f.name);
+    simulateUpload(processId, fileNames);
+    toast({
+      title: "Archivos subidos",
+      description: `Se subieron ${fileNames.length} archivo(s) exitosamente.`,
+    });
+    event.target.value = "";
   };
 
   const handleDownloadFile = (fileName: string) => {
@@ -242,11 +248,33 @@ export default function AuditDesk() {
         </div>
       </div>
 
-      {/* Download Actions */}
+      {/* Actions Bar */}
       <div className="flex items-center gap-3 flex-wrap">
+        {!isLocked && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".xml"
+              className="hidden"
+              onChange={handleFileUpload}
+              data-testid="input-file-upload"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              variant="default"
+              data-testid="button-upload-files"
+            >
+              <UploadCloud className="h-4 w-4 mr-2" />
+              Subir Archivos
+            </Button>
+          </>
+        )}
         <Button
           onClick={handleDownload}
           disabled={uniqueFilesCount === 0}
+          variant={isLocked ? "default" : "outline"}
           data-testid="button-download-all"
         >
           <Download className="h-4 w-4 mr-2" />
@@ -461,49 +489,69 @@ export default function AuditDesk() {
                         <div key={entry.id} className="flex gap-3 relative" data-testid={`audit-entry-${entry.id}`}>
                           <div className="relative z-10 mt-1 flex-shrink-0">
                             <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border-2 border-background">
-                              <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                              {entry.action === "upload" ? (
+                                <UploadCloud className="h-3 w-3 text-muted-foreground" />
+                              ) : (
+                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                              )}
                             </div>
                           </div>
                           <div className="flex-1 pb-2 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
-                              <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                              <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
-                            </div>
+                            {entry.action === "upload" ? (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-medium">Carga de archivos</span>
+                                {entry.uploadedFiles && (
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {entry.uploadedFiles.length} archivo{entry.uploadedFiles.length !== 1 ? "s" : ""}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {entry.previousStatus && (
+                                  <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
+                                )}
+                                <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                {entry.newStatus && (
+                                  <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
+                                )}
+                              </div>
+                            )}
                             <p className="text-xs text-muted-foreground mt-1">
                               {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
                             </p>
-                            {entry.feedbackComment && (() => {
-                              const lines = entry.feedbackComment.split("\n");
-                              const docLine = lines.find(l => l.startsWith("Documentos faltantes:"));
-                              const docTypes = docLine
-                                ? docLine.replace("Documentos faltantes: ", "").replace(".", "").split(", ")
-                                : [];
-                              const otherLines = lines.filter(l => !l.startsWith("Documentos faltantes:")).join("\n").trim();
-
-                              return (
-                                <div className="mt-1.5 p-2 bg-muted rounded-md space-y-1.5" data-testid={`audit-comment-${entry.id}`}>
-                                  {docTypes.length > 0 && (
-                                    <div className="flex items-start gap-1.5">
-                                      <FileQuestion className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                      <div className="flex flex-wrap gap-1">
-                                        {docTypes.map((doc) => (
-                                          <Badge key={doc} variant="outline" className="text-[10px] px-1.5 py-0">
-                                            {doc}
-                                          </Badge>
-                                        ))}
-                                      </div>
+                            {(entry.requestedDocTypes || entry.feedbackComment || entry.uploadedFiles) && (
+                              <div className="mt-1.5 p-2 bg-muted rounded-md space-y-1.5" data-testid={`audit-comment-${entry.id}`}>
+                                {entry.requestedDocTypes && entry.requestedDocTypes.length > 0 && (
+                                  <div className="flex items-start gap-1.5">
+                                    <FileQuestion className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                    <div className="flex flex-wrap gap-1">
+                                      {entry.requestedDocTypes.map((doc) => (
+                                        <Badge key={doc} variant="outline" className="text-[10px] px-1.5 py-0">
+                                          {doc}
+                                        </Badge>
+                                      ))}
                                     </div>
-                                  )}
-                                  {otherLines && (
-                                    <div className="flex gap-1.5">
-                                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                      <p className="text-xs">{otherLines}</p>
+                                  </div>
+                                )}
+                                {entry.feedbackComment && (
+                                  <div className="flex gap-1.5">
+                                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs">{entry.feedbackComment}</p>
+                                  </div>
+                                )}
+                                {entry.uploadedFiles && entry.uploadedFiles.length > 0 && (
+                                  <div className="flex items-start gap-1.5">
+                                    <File className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                    <div className="flex flex-col gap-0.5">
+                                      {entry.uploadedFiles.map((f) => (
+                                        <span key={f} className="text-[10px] text-muted-foreground">{f}</span>
+                                      ))}
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}

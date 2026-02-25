@@ -275,65 +275,100 @@ const initialAuditLog: AuditLogEntry[] = [
   {
     id: "al-1",
     processId: "pr-1",
+    action: "status_change",
     previousStatus: ProcessStatus.PENDING_REVIEW,
     newStatus: ProcessStatus.IN_REVIEW,
     feedbackComment: null,
+    uploadedFiles: null,
+    requestedDocTypes: null,
     createdAt: new Date("2024-06-05T10:00:00"),
   },
   {
     id: "al-2",
     processId: "pr-1",
+    action: "status_change",
     previousStatus: ProcessStatus.IN_REVIEW,
     newStatus: ProcessStatus.INCOMPLETE,
-    feedbackComment: "Documentos faltantes: Facturas de Ingreso, Complementos de Pago.\nFaltan facturas del proveedor LOG789012345 correspondientes al mes de marzo.",
+    feedbackComment: "Faltan facturas del proveedor LOG789012345 correspondientes al mes de marzo.",
+    uploadedFiles: null,
+    requestedDocTypes: ["Facturas de Ingreso", "Complementos de Pago"],
     createdAt: new Date("2024-06-08T15:30:00"),
+  },
+  {
+    id: "al-2b",
+    processId: "pr-1",
+    action: "upload",
+    previousStatus: null,
+    newStatus: null,
+    feedbackComment: null,
+    uploadedFiles: ["factura_004.xml", "factura_001_dup.xml", "factura_005.xml"],
+    requestedDocTypes: null,
+    createdAt: new Date("2024-06-15T14:45:00"),
   },
   {
     id: "al-3",
     processId: "pr-1",
+    action: "status_change",
     previousStatus: ProcessStatus.INCOMPLETE,
     newStatus: ProcessStatus.PENDING_REVIEW,
     feedbackComment: null,
+    uploadedFiles: null,
+    requestedDocTypes: null,
     createdAt: new Date("2024-06-15T14:50:00"),
   },
   {
     id: "al-4",
     processId: "pr-3",
+    action: "status_change",
     previousStatus: ProcessStatus.PENDING_REVIEW,
     newStatus: ProcessStatus.IN_REVIEW,
     feedbackComment: null,
+    uploadedFiles: null,
+    requestedDocTypes: null,
     createdAt: new Date("2024-05-15T09:00:00"),
   },
   {
     id: "al-5",
     processId: "pr-3",
+    action: "status_change",
     previousStatus: ProcessStatus.IN_REVIEW,
     newStatus: ProcessStatus.INCOMPLETE,
-    feedbackComment: "Documentos faltantes: Recibos de Nómina, Retenciones.\nFaltan los XMLs de nóminas del mes de abril y mayo. Por favor subir los comprobantes faltantes.",
+    feedbackComment: "Faltan los XMLs de nóminas del mes de abril y mayo. Por favor subir los comprobantes faltantes.",
+    uploadedFiles: null,
+    requestedDocTypes: ["Recibos de Nómina", "Retenciones"],
     createdAt: new Date("2024-06-01T11:00:00"),
   },
   {
     id: "al-6",
     processId: "pr-4",
+    action: "status_change",
     previousStatus: ProcessStatus.PENDING_REVIEW,
     newStatus: ProcessStatus.IN_REVIEW,
     feedbackComment: null,
+    uploadedFiles: null,
+    requestedDocTypes: null,
     createdAt: new Date("2024-02-10T14:00:00"),
   },
   {
     id: "al-7",
     processId: "pr-2",
+    action: "status_change",
     previousStatus: ProcessStatus.PENDING_REVIEW,
     newStatus: ProcessStatus.IN_REVIEW,
     feedbackComment: null,
+    uploadedFiles: null,
+    requestedDocTypes: null,
     createdAt: new Date("2024-02-20T10:00:00"),
   },
   {
     id: "al-8",
     processId: "pr-2",
+    action: "status_change",
     previousStatus: ProcessStatus.IN_REVIEW,
     newStatus: ProcessStatus.FINALIZED,
     feedbackComment: null,
+    uploadedFiles: null,
+    requestedDocTypes: null,
     createdAt: new Date("2024-03-20T16:00:00"),
   },
 ];
@@ -346,9 +381,10 @@ interface MockDataContextType {
   auditLog: AuditLogEntry[];
   addTaxpayer: (data: Omit<Taxpayer, "id" | "createdAt">) => Taxpayer;
   addProcess: (data: Omit<Process, "id" | "createdAt" | "updatedAt">) => Process;
-  updateProcessStatus: (processId: string, status: string, feedbackComment?: string) => void;
+  updateProcessStatus: (processId: string, status: string, feedbackComment?: string, requestedDocTypes?: string[]) => void;
   finalizeProcess: (processId: string) => void;
   clearNewInfoFlag: (processId: string) => void;
+  simulateUpload: (processId: string, fileNames: string[]) => void;
   getTaxpayerWithProcess: (taxpayerId: string) => Taxpayer & { activeProcess?: Process; lastUploadDate?: Date } | undefined;
   getProcessesForTaxpayer: (taxpayerId: string) => Process[];
   getProcessDetail: (processId: string) => {
@@ -359,6 +395,7 @@ interface MockDataContextType {
     totalFilesCount: number;
   } | undefined;
   getAuditLog: (processId: string) => AuditLogEntry[];
+  getRequestedDocTypes: (processId: string) => string[];
   getStats: () => {
     totalTaxpayers: number;
     activeProcesses: number;
@@ -372,8 +409,8 @@ const MockDataContext = createContext<MockDataContextType | undefined>(undefined
 export function MockDataProvider({ children }: { children: ReactNode }) {
   const [taxpayers, setTaxpayers] = useState<Taxpayer[]>(initialTaxpayers);
   const [processes, setProcesses] = useState<Process[]>(initialProcesses);
-  const [uploads] = useState<Upload[]>(initialUploads);
-  const [xmlFiles] = useState<XmlFile[]>(initialXmlFiles);
+  const [uploads, setUploads] = useState<Upload[]>(initialUploads);
+  const [xmlFiles, setXmlFiles] = useState<XmlFile[]>(initialXmlFiles);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>(initialAuditLog);
 
   const addTaxpayer = (data: Omit<Taxpayer, "id" | "createdAt">) => {
@@ -397,7 +434,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     return newProcess;
   };
 
-  const updateProcessStatus = (processId: string, status: string, feedbackComment?: string) => {
+  const updateProcessStatus = (processId: string, status: string, feedbackComment?: string, requestedDocTypes?: string[]) => {
     const currentProcess = processes.find((p) => p.id === processId);
     if (currentProcess && currentProcess.status !== status) {
       setAuditLog((prev) => [
@@ -405,9 +442,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         {
           id: generateId(),
           processId,
+          action: "status_change" as const,
           previousStatus: currentProcess.status,
           newStatus: status,
           feedbackComment: feedbackComment || null,
+          uploadedFiles: null,
+          requestedDocTypes: requestedDocTypes && requestedDocTypes.length > 0 ? requestedDocTypes : null,
           createdAt: new Date(),
         },
       ]);
@@ -435,9 +475,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         {
           id: generateId(),
           processId,
+          action: "status_change" as const,
           previousStatus: currentProcess.status,
           newStatus: ProcessStatus.FINALIZED,
           feedbackComment: null,
+          uploadedFiles: null,
+          requestedDocTypes: null,
           createdAt: new Date(),
         },
       ]);
@@ -452,6 +495,59 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
               hasNewInfo: "false",
               updatedAt: new Date(),
             }
+          : p
+      )
+    );
+  };
+
+  const simulateUpload = (processId: string, fileNames: string[]) => {
+    const processUploads = uploads.filter((u) => u.processId === processId);
+    const nextUploadNumber = processUploads.length > 0
+      ? Math.max(...processUploads.map((u) => u.uploadNumber)) + 1
+      : 1;
+
+    const uploadId = generateId();
+    const newUpload: Upload = {
+      id: uploadId,
+      processId,
+      uploadNumber: nextUploadNumber,
+      createdAt: new Date(),
+    };
+    setUploads((prev) => [...prev, newUpload]);
+
+    const newFiles: XmlFile[] = fileNames.map((fileName) => ({
+      id: generateId(),
+      uploadId,
+      processId,
+      uuid: `${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+      fileName,
+      issuerRfc: null,
+      receiverRfc: null,
+      amount: null,
+      issueDate: null,
+      createdAt: new Date(),
+    }));
+    setXmlFiles((prev) => [...prev, ...newFiles]);
+
+    setAuditLog((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        processId,
+        action: "upload" as const,
+        previousStatus: null,
+        newStatus: null,
+        feedbackComment: null,
+        uploadedFiles: fileNames,
+        requestedDocTypes: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    setProcesses((prev) =>
+      prev.map((p) =>
+        p.id === processId
+          ? { ...p, hasNewInfo: "true", updatedAt: new Date() }
           : p
       )
     );
@@ -525,6 +621,13 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   };
 
+  const getRequestedDocTypes = (processId: string) => {
+    const allRequested = auditLog
+      .filter((entry) => entry.processId === processId && entry.requestedDocTypes && entry.requestedDocTypes.length > 0)
+      .flatMap((entry) => entry.requestedDocTypes || []);
+    return [...new Set(allRequested)];
+  };
+
   const getStats = () => {
     return {
       totalTaxpayers: taxpayers.length,
@@ -547,10 +650,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         updateProcessStatus,
         finalizeProcess,
         clearNewInfoFlag,
+        simulateUpload,
         getTaxpayerWithProcess,
         getProcessesForTaxpayer,
         getProcessDetail,
         getAuditLog,
+        getRequestedDocTypes,
         getStats,
       }}
     >
