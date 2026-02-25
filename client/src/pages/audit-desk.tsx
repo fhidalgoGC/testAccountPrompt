@@ -16,6 +16,8 @@ import {
   History,
   ArrowRight,
   MessageSquare,
+  X,
+  FileQuestion,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,6 +69,33 @@ export default function AuditDesk() {
   const { toast } = useToast();
   const [comment, setComment] = useState("");
   const [expandedUploads, setExpandedUploads] = useState<Set<string>>(new Set());
+  const [selectedDocTypes, setSelectedDocTypes] = useState<Set<string>>(new Set());
+
+  const documentTypes = [
+    "Facturas de Ingreso",
+    "Facturas de Egreso",
+    "Complementos de Pago",
+    "Notas de Crédito",
+    "Recibos de Nómina",
+    "Retenciones",
+    "Constancias de Situación Fiscal",
+    "Declaraciones Mensuales",
+    "Declaración Anual",
+    "Estados de Cuenta Bancarios",
+    "Acuses de Recibo SAT",
+  ];
+
+  const toggleDocType = (docType: string) => {
+    setSelectedDocTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(docType)) {
+        next.delete(docType);
+      } else {
+        next.add(docType);
+      }
+      return next;
+    });
+  };
 
   const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog } = useMockData();
 
@@ -75,19 +104,27 @@ export default function AuditDesk() {
   const handleStatusChange = (newStatus: string) => {
     if (!processId) return;
 
-    if (newStatus === ProcessStatus.INCOMPLETE && !comment.trim()) {
+    if (newStatus === ProcessStatus.INCOMPLETE && !comment.trim() && selectedDocTypes.size === 0) {
       toast({
-        title: "Comentario requerido",
-        description: "Debes agregar un comentario para el cliente cuando marcas el proceso como incompleto.",
+        title: "Comentario o documentos requeridos",
+        description: "Debes agregar un comentario o seleccionar los documentos faltantes cuando marcas el proceso como incompleto.",
         variant: "destructive",
       });
       return;
     }
 
+    let fullComment = "";
+    if (selectedDocTypes.size > 0) {
+      fullComment += "Documentos faltantes: " + Array.from(selectedDocTypes).join(", ") + ".";
+    }
+    if (comment.trim()) {
+      fullComment += (fullComment ? "\n" : "") + comment;
+    }
+
     updateProcessStatus(
       processId,
       newStatus,
-      newStatus === ProcessStatus.INCOMPLETE ? comment : undefined
+      newStatus === ProcessStatus.INCOMPLETE && fullComment ? fullComment : undefined
     );
 
     toast({
@@ -95,6 +132,7 @@ export default function AuditDesk() {
       description: "El estado del proceso ha sido actualizado exitosamente.",
     });
     setComment("");
+    setSelectedDocTypes(new Set());
   };
 
   const handleFinalize = () => {
@@ -312,14 +350,56 @@ export default function AuditDesk() {
                   </div>
 
                   <div className="space-y-3">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <FileQuestion className="h-4 w-4" />
+                      Documentos Faltantes
+                    </label>
+                    <Select
+                      value=""
+                      onValueChange={(value) => {
+                        if (value && !selectedDocTypes.has(value)) {
+                          toggleDocType(value);
+                        }
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-doc-types">
+                        <SelectValue placeholder="Seleccionar tipo de documento..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {documentTypes.map((docType) => (
+                          <SelectItem
+                            key={docType}
+                            value={docType}
+                            disabled={selectedDocTypes.has(docType)}
+                          >
+                            {docType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedDocTypes.size > 0 && (
+                      <div className="flex flex-wrap gap-1.5" data-testid="selected-doc-types">
+                        {Array.from(selectedDocTypes).map((docType) => (
+                          <Badge
+                            key={docType}
+                            variant="secondary"
+                            className="gap-1 cursor-pointer hover:bg-destructive/10"
+                            onClick={() => toggleDocType(docType)}
+                          >
+                            {docType}
+                            <X className="h-3 w-3" />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
                     <label className="text-sm font-medium">
                       Comentarios para el Cliente
-                      {process.status === ProcessStatus.INCOMPLETE && (
-                        <span className="text-destructive ml-1">*</span>
-                      )}
                     </label>
                     <Textarea
-                      placeholder="Escribe un mensaje para el cliente indicando qué información adicional necesitas..."
+                      placeholder="Escribe un mensaje adicional para el cliente..."
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                       rows={3}
@@ -328,7 +408,7 @@ export default function AuditDesk() {
                     {process.feedbackComment && (
                       <div className="p-3 bg-muted rounded-lg">
                         <p className="text-xs text-muted-foreground mb-1">Último comentario enviado:</p>
-                        <p className="text-sm">{process.feedbackComment}</p>
+                        <p className="text-sm whitespace-pre-line">{process.feedbackComment}</p>
                       </div>
                     )}
                   </div>
@@ -337,11 +417,11 @@ export default function AuditDesk() {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        if (comment.trim()) {
+                        if (comment.trim() || selectedDocTypes.size > 0) {
                           handleStatusChange(ProcessStatus.INCOMPLETE);
                         }
                       }}
-                      disabled={!comment.trim()}
+                      disabled={!comment.trim() && selectedDocTypes.size === 0}
                       className="w-full"
                       data-testid="button-send-feedback"
                     >
