@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { type Taxpayer, type Process, type Upload, type XmlFile, ProcessStatus } from "@shared/schema";
+import { type Taxpayer, type Process, type Upload, type XmlFile, type AuditLogEntry, ProcessStatus } from "@shared/schema";
 
 // Generate unique IDs
 let idCounter = 1;
@@ -271,11 +271,79 @@ const initialXmlFiles: XmlFile[] = [
   },
 ];
 
+const initialAuditLog: AuditLogEntry[] = [
+  {
+    id: "al-1",
+    processId: "pr-1",
+    previousStatus: ProcessStatus.PENDING_REVIEW,
+    newStatus: ProcessStatus.IN_REVIEW,
+    feedbackComment: null,
+    createdAt: new Date("2024-06-05T10:00:00"),
+  },
+  {
+    id: "al-2",
+    processId: "pr-1",
+    previousStatus: ProcessStatus.IN_REVIEW,
+    newStatus: ProcessStatus.INCOMPLETE,
+    feedbackComment: "Faltan facturas del proveedor LOG789012345 correspondientes al mes de marzo.",
+    createdAt: new Date("2024-06-08T15:30:00"),
+  },
+  {
+    id: "al-3",
+    processId: "pr-1",
+    previousStatus: ProcessStatus.INCOMPLETE,
+    newStatus: ProcessStatus.PENDING_REVIEW,
+    feedbackComment: null,
+    createdAt: new Date("2024-06-15T14:50:00"),
+  },
+  {
+    id: "al-4",
+    processId: "pr-3",
+    previousStatus: ProcessStatus.PENDING_REVIEW,
+    newStatus: ProcessStatus.IN_REVIEW,
+    feedbackComment: null,
+    createdAt: new Date("2024-05-15T09:00:00"),
+  },
+  {
+    id: "al-5",
+    processId: "pr-3",
+    previousStatus: ProcessStatus.IN_REVIEW,
+    newStatus: ProcessStatus.INCOMPLETE,
+    feedbackComment: "Faltan los XMLs de nóminas del mes de abril y mayo. Por favor subir los comprobantes faltantes.",
+    createdAt: new Date("2024-06-01T11:00:00"),
+  },
+  {
+    id: "al-6",
+    processId: "pr-4",
+    previousStatus: ProcessStatus.PENDING_REVIEW,
+    newStatus: ProcessStatus.IN_REVIEW,
+    feedbackComment: null,
+    createdAt: new Date("2024-02-10T14:00:00"),
+  },
+  {
+    id: "al-7",
+    processId: "pr-2",
+    previousStatus: ProcessStatus.PENDING_REVIEW,
+    newStatus: ProcessStatus.IN_REVIEW,
+    feedbackComment: null,
+    createdAt: new Date("2024-02-20T10:00:00"),
+  },
+  {
+    id: "al-8",
+    processId: "pr-2",
+    previousStatus: ProcessStatus.IN_REVIEW,
+    newStatus: ProcessStatus.FINALIZED,
+    feedbackComment: null,
+    createdAt: new Date("2024-03-20T16:00:00"),
+  },
+];
+
 interface MockDataContextType {
   taxpayers: Taxpayer[];
   processes: Process[];
   uploads: Upload[];
   xmlFiles: XmlFile[];
+  auditLog: AuditLogEntry[];
   addTaxpayer: (data: Omit<Taxpayer, "id" | "createdAt">) => Taxpayer;
   addProcess: (data: Omit<Process, "id" | "createdAt" | "updatedAt">) => Process;
   updateProcessStatus: (processId: string, status: string, feedbackComment?: string) => void;
@@ -290,6 +358,7 @@ interface MockDataContextType {
     uniqueFilesCount: number;
     totalFilesCount: number;
   } | undefined;
+  getAuditLog: (processId: string) => AuditLogEntry[];
   getStats: () => {
     totalTaxpayers: number;
     activeProcesses: number;
@@ -305,6 +374,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   const [processes, setProcesses] = useState<Process[]>(initialProcesses);
   const [uploads] = useState<Upload[]>(initialUploads);
   const [xmlFiles] = useState<XmlFile[]>(initialXmlFiles);
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>(initialAuditLog);
 
   const addTaxpayer = (data: Omit<Taxpayer, "id" | "createdAt">) => {
     const newTaxpayer: Taxpayer = {
@@ -328,6 +398,20 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProcessStatus = (processId: string, status: string, feedbackComment?: string) => {
+    const currentProcess = processes.find((p) => p.id === processId);
+    if (currentProcess && currentProcess.status !== status) {
+      setAuditLog((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          processId,
+          previousStatus: currentProcess.status,
+          newStatus: status,
+          feedbackComment: feedbackComment || null,
+          createdAt: new Date(),
+        },
+      ]);
+    }
     setProcesses((prev) =>
       prev.map((p) =>
         p.id === processId
@@ -344,6 +428,20 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   };
 
   const finalizeProcess = (processId: string) => {
+    const currentProcess = processes.find((p) => p.id === processId);
+    if (currentProcess) {
+      setAuditLog((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          processId,
+          previousStatus: currentProcess.status,
+          newStatus: ProcessStatus.FINALIZED,
+          feedbackComment: null,
+          createdAt: new Date(),
+        },
+      ]);
+    }
     setProcesses((prev) =>
       prev.map((p) =>
         p.id === processId
@@ -421,6 +519,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const getAuditLog = (processId: string) => {
+    return auditLog
+      .filter((entry) => entry.processId === processId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+
   const getStats = () => {
     return {
       totalTaxpayers: taxpayers.length,
@@ -437,6 +541,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         processes,
         uploads,
         xmlFiles,
+        auditLog,
         addTaxpayer,
         addProcess,
         updateProcessStatus,
@@ -445,6 +550,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         getTaxpayerWithProcess,
         getProcessesForTaxpayer,
         getProcessDetail,
+        getAuditLog,
         getStats,
       }}
     >

@@ -13,6 +13,9 @@ import {
   ChevronDown,
   ChevronUp,
   File,
+  History,
+  ArrowRight,
+  MessageSquare,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,7 +58,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data";
-import { ProcessStatus } from "@shared/schema";
+import { ProcessStatus, type ProcessStatusType } from "@shared/schema";
 import { useState } from "react";
 
 export default function AuditDesk() {
@@ -65,7 +68,7 @@ export default function AuditDesk() {
   const [comment, setComment] = useState("");
   const [expandedUploads, setExpandedUploads] = useState<Set<string>>(new Set());
 
-  const { getProcessDetail, updateProcessStatus, finalizeProcess } = useMockData();
+  const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog } = useMockData();
 
   const processDetail = processId ? getProcessDetail(processId) : undefined;
 
@@ -383,6 +386,66 @@ export default function AuditDesk() {
           </CardContent>
         </Card>
       )}
+
+      {/* Audit Trail */}
+      {processId && (() => {
+        const entries = getAuditLog(processId);
+        return (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <History className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <CardTitle>Historial de Cambios</CardTitle>
+                  <CardDescription>
+                    Registro de cambios de estado y mensajes enviados al cliente
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {entries.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No hay cambios registrados para este proceso.
+                </p>
+              ) : (
+                <div className="relative">
+                  <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
+                  <div className="space-y-4">
+                    {entries.map((entry) => (
+                      <div key={entry.id} className="flex gap-4 relative" data-testid={`audit-entry-${entry.id}`}>
+                        <div className="relative z-10 mt-1 flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center border-2 border-background">
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <div className="flex-1 pb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
+                            <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1.5">
+                            {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                          </p>
+                          {entry.feedbackComment && (
+                            <div className="mt-2 p-3 bg-muted rounded-lg flex gap-2">
+                              <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                              <p className="text-sm" data-testid={`audit-comment-${entry.id}`}>
+                                {entry.feedbackComment}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Upload History */}
       <Card>
