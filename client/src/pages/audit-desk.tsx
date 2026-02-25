@@ -21,6 +21,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { NewInfoAlert } from "@/components/new-info-alert";
@@ -265,10 +273,85 @@ export default function AuditDesk() {
       {!isLocked && (
         <Card>
           <CardHeader>
-            <CardTitle>Panel de Control</CardTitle>
-            <CardDescription>
-              Gestiona el estado del proceso y comunica con el cliente
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Panel de Control</CardTitle>
+                <CardDescription>
+                  Gestiona el estado del proceso y comunica con el cliente
+                </CardDescription>
+              </div>
+              {processId && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" data-testid="button-view-history">
+                      <History className="h-4 w-4 mr-2" />
+                      Ver Historial
+                      {(() => {
+                        const count = getAuditLog(processId).length;
+                        return count > 0 ? (
+                          <Badge variant="secondary" className="ml-2">{count}</Badge>
+                        ) : null;
+                      })()}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5" />
+                        Historial de Cambios
+                      </DialogTitle>
+                      <DialogDescription>
+                        Registro completo de cambios de estado y mensajes enviados al cliente
+                      </DialogDescription>
+                    </DialogHeader>
+                    {(() => {
+                      const entries = getAuditLog(processId);
+                      if (entries.length === 0) {
+                        return (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            No hay cambios registrados para este proceso.
+                          </p>
+                        );
+                      }
+                      return (
+                        <div className="relative mt-2">
+                          <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
+                          <div className="space-y-5">
+                            {entries.map((entry) => (
+                              <div key={entry.id} className="flex gap-4 relative" data-testid={`audit-entry-${entry.id}`}>
+                                <div className="relative z-10 mt-1 flex-shrink-0">
+                                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center border-2 border-background">
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                </div>
+                                <div className="flex-1 pb-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
+                                    <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                    <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1.5">
+                                    {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                                  </p>
+                                  {entry.feedbackComment && (
+                                    <div className="mt-2 p-3 bg-muted rounded-lg flex gap-2">
+                                      <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                      <p className="text-sm" data-testid={`audit-comment-${entry.id}`}>
+                                        {entry.feedbackComment}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
@@ -370,82 +453,95 @@ export default function AuditDesk() {
       {isLocked && (
         <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                <Lock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                  <Lock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-emerald-800 dark:text-emerald-300">
+                    Proceso Finalizado
+                  </h3>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                    Este proceso ha sido aprobado y está bloqueado para nuevas subidas de archivos.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-medium text-emerald-800 dark:text-emerald-300">
-                  Proceso Finalizado
-                </h3>
-                <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                  Este proceso ha sido aprobado y está bloqueado para nuevas subidas de archivos.
-                </p>
-              </div>
+              {processId && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" data-testid="button-view-history-locked">
+                      <History className="h-4 w-4 mr-2" />
+                      Ver Historial
+                      {(() => {
+                        const count = getAuditLog(processId).length;
+                        return count > 0 ? (
+                          <Badge variant="secondary" className="ml-2">{count}</Badge>
+                        ) : null;
+                      })()}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5" />
+                        Historial de Cambios
+                      </DialogTitle>
+                      <DialogDescription>
+                        Registro completo de cambios de estado y mensajes enviados al cliente
+                      </DialogDescription>
+                    </DialogHeader>
+                    {(() => {
+                      const entries = getAuditLog(processId);
+                      if (entries.length === 0) {
+                        return (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            No hay cambios registrados para este proceso.
+                          </p>
+                        );
+                      }
+                      return (
+                        <div className="relative mt-2">
+                          <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
+                          <div className="space-y-5">
+                            {entries.map((entry) => (
+                              <div key={entry.id} className="flex gap-4 relative" data-testid={`audit-entry-${entry.id}`}>
+                                <div className="relative z-10 mt-1 flex-shrink-0">
+                                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center border-2 border-background">
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                </div>
+                                <div className="flex-1 pb-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
+                                    <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                    <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1.5">
+                                    {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                                  </p>
+                                  {entry.feedbackComment && (
+                                    <div className="mt-2 p-3 bg-muted rounded-lg flex gap-2">
+                                      <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                      <p className="text-sm" data-testid={`audit-comment-${entry.id}`}>
+                                        {entry.feedbackComment}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Audit Trail */}
-      {processId && (() => {
-        const entries = getAuditLog(processId);
-        return (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <History className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <CardTitle>Historial de Cambios</CardTitle>
-                  <CardDescription>
-                    Registro de cambios de estado y mensajes enviados al cliente
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {entries.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  No hay cambios registrados para este proceso.
-                </p>
-              ) : (
-                <div className="relative">
-                  <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
-                  <div className="space-y-4">
-                    {entries.map((entry) => (
-                      <div key={entry.id} className="flex gap-4 relative" data-testid={`audit-entry-${entry.id}`}>
-                        <div className="relative z-10 mt-1 flex-shrink-0">
-                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center border-2 border-background">
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                        <div className="flex-1 pb-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
-                            <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1.5">
-                            {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
-                          </p>
-                          {entry.feedbackComment && (
-                            <div className="mt-2 p-3 bg-muted rounded-lg flex gap-2">
-                              <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                              <p className="text-sm" data-testid={`audit-comment-${entry.id}`}>
-                                {entry.feedbackComment}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })()}
 
       {/* Upload History */}
       <Card>
