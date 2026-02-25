@@ -2,7 +2,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import { type Taxpayer, type Process, type Upload, type XmlFile, type AuditLogEntry, ProcessStatus } from "@shared/schema";
 
 // Generate unique IDs
-let idCounter = 1;
+let idCounter = 100;
 const generateId = () => `id-${idCounter++}`;
 
 // Initial mock taxpayers

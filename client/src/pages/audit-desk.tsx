@@ -242,75 +242,28 @@ export default function AuditDesk() {
         </div>
       </div>
 
-      {/* Stats and Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Cargas
-            </CardTitle>
-            <Upload className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-total-uploads">
-              {uploads.length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Archivos Totales
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-total-files">
-              {totalFilesCount}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Archivos Únicos
-            </CardTitle>
-            <File className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary" data-testid="text-unique-files">
-              {uniqueFilesCount}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalFilesCount - uniqueFilesCount} duplicados
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={handleDownload}
-                disabled={uniqueFilesCount === 0}
-                className="w-full"
-                data-testid="button-download-all"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Descargar Todo (.zip)
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleDownloadExcel}
-                disabled={uniqueFilesCount === 0}
-                className="w-full"
-                data-testid="button-download-excel"
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Papel de Trabajo
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Download Actions */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button
+          onClick={handleDownload}
+          disabled={uniqueFilesCount === 0}
+          data-testid="button-download-all"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Descargar Todo (.zip)
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleDownloadExcel}
+          disabled={uniqueFilesCount === 0}
+          data-testid="button-download-excel"
+        >
+          <FileSpreadsheet className="h-4 w-4 mr-2" />
+          Papel de Trabajo
+        </Button>
+        <span className="text-sm text-muted-foreground ml-auto">
+          {uniqueFilesCount} archivos únicos · {totalFilesCount - uniqueFilesCount} duplicados · {uploads.length} cargas
+        </span>
       </div>
 
       {/* Panel de Control - Two Column Layout */}
