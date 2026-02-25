@@ -120,6 +120,20 @@ export default function AuditDesk() {
     });
   };
 
+  const handleDownloadFile = (fileName: string) => {
+    toast({
+      title: "Descarga simulada",
+      description: `En producción, aquí se descargaría "${fileName}".`,
+    });
+  };
+
+  const handleDownloadUpload = (uploadNumber: number) => {
+    toast({
+      title: "Descarga simulada",
+      description: `En producción, aquí se descargarían todos los archivos de la Carga #${uploadNumber} en ZIP.`,
+    });
+  };
+
   const toggleUpload = (uploadId: string) => {
     const newExpanded = new Set(expandedUploads);
     if (newExpanded.has(uploadId)) {
@@ -491,6 +505,18 @@ export default function AuditDesk() {
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadUpload(upload.uploadNumber);
+                              }}
+                              data-testid={`button-download-upload-${upload.id}`}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Descargar
+                            </Button>
                             <Badge variant="secondary">{upload.files.length} archivos</Badge>
                             {expandedUploads.has(upload.id) ? (
                               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -518,6 +544,7 @@ export default function AuditDesk() {
                                     <TableHead>RFC Receptor</TableHead>
                                     <TableHead className="text-right">Monto</TableHead>
                                     <TableHead>Fecha</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -547,6 +574,17 @@ export default function AuditDesk() {
                                       </TableCell>
                                       <TableCell className="text-sm">
                                         {file.issueDate || "—"}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={() => handleDownloadFile(file.fileName)}
+                                          data-testid={`button-download-file-${file.id}`}
+                                        >
+                                          <Download className="h-4 w-4" />
+                                        </Button>
                                       </TableCell>
                                     </TableRow>
                                   ))}
