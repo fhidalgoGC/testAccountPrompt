@@ -285,7 +285,7 @@ const initialAuditLog: AuditLogEntry[] = [
     processId: "pr-1",
     previousStatus: ProcessStatus.IN_REVIEW,
     newStatus: ProcessStatus.INCOMPLETE,
-    feedbackComment: "Faltan facturas del proveedor LOG789012345 correspondientes al mes de marzo.",
+    feedbackComment: "Documentos faltantes: Facturas de Ingreso, Complementos de Pago.\nFaltan facturas del proveedor LOG789012345 correspondientes al mes de marzo.",
     createdAt: new Date("2024-06-08T15:30:00"),
   },
   {
@@ -309,7 +309,7 @@ const initialAuditLog: AuditLogEntry[] = [
     processId: "pr-3",
     previousStatus: ProcessStatus.IN_REVIEW,
     newStatus: ProcessStatus.INCOMPLETE,
-    feedbackComment: "Faltan los XMLs de nóminas del mes de abril y mayo. Por favor subir los comprobantes faltantes.",
+    feedbackComment: "Documentos faltantes: Recibos de Nómina, Retenciones.\nFaltan los XMLs de nóminas del mes de abril y mayo. Por favor subir los comprobantes faltantes.",
     createdAt: new Date("2024-06-01T11:00:00"),
   },
   {

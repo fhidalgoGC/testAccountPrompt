@@ -520,14 +520,37 @@ export default function AuditDesk() {
                             <p className="text-xs text-muted-foreground mt-1">
                               {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
                             </p>
-                            {entry.feedbackComment && (
-                              <div className="mt-1.5 p-2 bg-muted rounded-md flex gap-2">
-                                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                <p className="text-xs" data-testid={`audit-comment-${entry.id}`}>
-                                  {entry.feedbackComment}
-                                </p>
-                              </div>
-                            )}
+                            {entry.feedbackComment && (() => {
+                              const lines = entry.feedbackComment.split("\n");
+                              const docLine = lines.find(l => l.startsWith("Documentos faltantes:"));
+                              const docTypes = docLine
+                                ? docLine.replace("Documentos faltantes: ", "").replace(".", "").split(", ")
+                                : [];
+                              const otherLines = lines.filter(l => !l.startsWith("Documentos faltantes:")).join("\n").trim();
+
+                              return (
+                                <div className="mt-1.5 p-2 bg-muted rounded-md space-y-1.5" data-testid={`audit-comment-${entry.id}`}>
+                                  {docTypes.length > 0 && (
+                                    <div className="flex items-start gap-1.5">
+                                      <FileQuestion className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                      <div className="flex flex-wrap gap-1">
+                                        {docTypes.map((doc) => (
+                                          <Badge key={doc} variant="outline" className="text-[10px] px-1.5 py-0">
+                                            {doc}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {otherLines && (
+                                    <div className="flex gap-1.5">
+                                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                      <p className="text-xs">{otherLines}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}
