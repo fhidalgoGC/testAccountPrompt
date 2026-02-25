@@ -21,14 +21,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { NewInfoAlert } from "@/components/new-info-alert";
@@ -269,279 +261,190 @@ export default function AuditDesk() {
         </Card>
       </div>
 
-      {/* Status Management */}
-      {!isLocked && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Panel de Control</CardTitle>
-                <CardDescription>
-                  Gestiona el estado del proceso y comunica con el cliente
-                </CardDescription>
-              </div>
-              {processId && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="button-view-history">
-                      <History className="h-4 w-4 mr-2" />
-                      Ver Historial
-                      {(() => {
-                        const count = getAuditLog(processId).length;
-                        return count > 0 ? (
-                          <Badge variant="secondary" className="ml-2">{count}</Badge>
-                        ) : null;
-                      })()}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <History className="h-5 w-5" />
-                        Historial de Cambios
-                      </DialogTitle>
-                      <DialogDescription>
-                        Registro completo de cambios de estado y mensajes enviados al cliente
-                      </DialogDescription>
-                    </DialogHeader>
-                    {(() => {
-                      const entries = getAuditLog(processId);
-                      if (entries.length === 0) {
-                        return (
-                          <p className="text-sm text-muted-foreground text-center py-8">
-                            No hay cambios registrados para este proceso.
-                          </p>
-                        );
-                      }
-                      return (
-                        <div className="relative mt-2">
-                          <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
-                          <div className="space-y-5">
-                            {entries.map((entry) => (
-                              <div key={entry.id} className="flex gap-4 relative" data-testid={`audit-entry-${entry.id}`}>
-                                <div className="relative z-10 mt-1 flex-shrink-0">
-                                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center border-2 border-background">
-                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                                <div className="flex-1 pb-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
-                                    <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-1.5">
-                                    {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
-                                  </p>
-                                  {entry.feedbackComment && (
-                                    <div className="mt-2 p-3 bg-muted rounded-lg flex gap-2">
-                                      <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                      <p className="text-sm" data-testid={`audit-comment-${entry.id}`}>
-                                        {entry.feedbackComment}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Cambiar Estado</label>
-                <Select
-                  value={process.status}
-                  onValueChange={handleStatusChange}
-                >
-                  <SelectTrigger data-testid="select-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ProcessStatus.PENDING_REVIEW}>
-                      Pendiente de Revisión
-                    </SelectItem>
-                    <SelectItem value={ProcessStatus.IN_REVIEW}>En Revisión</SelectItem>
-                    <SelectItem value={ProcessStatus.INCOMPLETE}>
-                      Faltan Datos
-                    </SelectItem>
-                    <SelectItem value={ProcessStatus.CORRECTED}>Corregido</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="default"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700"
-                      disabled={uniqueFilesCount === 0}
-                      data-testid="button-finalize"
+      {/* Panel de Control - Two Column Layout */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Panel de Control</CardTitle>
+          <CardDescription>
+            Gestiona el estado del proceso y comunica con el cliente
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Left Column - Controls */}
+            <div className="space-y-4">
+              {!isLocked ? (
+                <>
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Cambiar Estado</label>
+                    <Select
+                      value={process.status}
+                      onValueChange={handleStatusChange}
                     >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Aprobar y Finalizar
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Finalizar Proceso</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta acción cerrará el proceso y bloqueará nuevas subidas de archivos.
-                        ¿Estás seguro de que deseas continuar?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleFinalize}
-                        data-testid="button-confirm-finalize"
-                      >
-                        Sí, Finalizar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-medium">
-                  Comentarios para el Cliente
-                  {process.status === ProcessStatus.INCOMPLETE && (
-                    <span className="text-destructive ml-1">*</span>
-                  )}
-                </label>
-                <Textarea
-                  placeholder="Escribe un mensaje para el cliente indicando qué información adicional necesitas..."
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  rows={3}
-                  data-testid="textarea-feedback"
-                />
-                {process.feedbackComment && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Último comentario enviado:</p>
-                    <p className="text-sm">{process.feedbackComment}</p>
+                      <SelectTrigger data-testid="select-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ProcessStatus.PENDING_REVIEW}>
+                          Pendiente de Revisión
+                        </SelectItem>
+                        <SelectItem value={ProcessStatus.IN_REVIEW}>En Revisión</SelectItem>
+                        <SelectItem value={ProcessStatus.INCOMPLETE}>
+                          Faltan Datos
+                        </SelectItem>
+                        <SelectItem value={ProcessStatus.CORRECTED}>Corregido</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (comment.trim()) {
-                      handleStatusChange(ProcessStatus.INCOMPLETE);
-                    }
-                  }}
-                  disabled={!comment.trim()}
-                  className="w-full"
-                  data-testid="button-send-feedback"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar y Marcar como Faltan Datos
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Locked Process Notice */}
-      {isLocked && (
-        <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                  <Lock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-emerald-800 dark:text-emerald-300">
-                    Proceso Finalizado
-                  </h3>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                    Este proceso ha sido aprobado y está bloqueado para nuevas subidas de archivos.
-                  </p>
-                </div>
-              </div>
-              {processId && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="button-view-history-locked">
-                      <History className="h-4 w-4 mr-2" />
-                      Ver Historial
-                      {(() => {
-                        const count = getAuditLog(processId).length;
-                        return count > 0 ? (
-                          <Badge variant="secondary" className="ml-2">{count}</Badge>
-                        ) : null;
-                      })()}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">
+                      Comentarios para el Cliente
+                      {process.status === ProcessStatus.INCOMPLETE && (
+                        <span className="text-destructive ml-1">*</span>
+                      )}
+                    </label>
+                    <Textarea
+                      placeholder="Escribe un mensaje para el cliente indicando qué información adicional necesitas..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      rows={3}
+                      data-testid="textarea-feedback"
+                    />
+                    {process.feedbackComment && (
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Último comentario enviado:</p>
+                        <p className="text-sm">{process.feedbackComment}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (comment.trim()) {
+                          handleStatusChange(ProcessStatus.INCOMPLETE);
+                        }
+                      }}
+                      disabled={!comment.trim()}
+                      className="w-full"
+                      data-testid="button-send-feedback"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar y Marcar como Faltan Datos
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <History className="h-5 w-5" />
-                        Historial de Cambios
-                      </DialogTitle>
-                      <DialogDescription>
-                        Registro completo de cambios de estado y mensajes enviados al cliente
-                      </DialogDescription>
-                    </DialogHeader>
-                    {(() => {
-                      const entries = getAuditLog(processId);
-                      if (entries.length === 0) {
-                        return (
-                          <p className="text-sm text-muted-foreground text-center py-8">
-                            No hay cambios registrados para este proceso.
-                          </p>
-                        );
-                      }
-                      return (
-                        <div className="relative mt-2">
-                          <div className="absolute left-[19px] top-3 bottom-3 w-px bg-border" />
-                          <div className="space-y-5">
-                            {entries.map((entry) => (
-                              <div key={entry.id} className="flex gap-4 relative" data-testid={`audit-entry-${entry.id}`}>
-                                <div className="relative z-10 mt-1 flex-shrink-0">
-                                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center border-2 border-background">
-                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                                <div className="flex-1 pb-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
-                                    <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-1.5">
-                                    {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
-                                  </p>
-                                  {entry.feedbackComment && (
-                                    <div className="mt-2 p-3 bg-muted rounded-lg flex gap-2">
-                                      <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                      <p className="text-sm" data-testid={`audit-comment-${entry.id}`}>
-                                        {entry.feedbackComment}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </DialogContent>
-                </Dialog>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="default"
+                          className="w-full bg-emerald-600 hover:bg-emerald-700"
+                          disabled={uniqueFilesCount === 0}
+                          data-testid="button-finalize"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Aprobar y Finalizar
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Finalizar Proceso</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción cerrará el proceso y bloqueará nuevas subidas de archivos.
+                            ¿Estás seguro de que deseas continuar?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleFinalize}
+                            data-testid="button-confirm-finalize"
+                          >
+                            Sí, Finalizar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0">
+                    <Lock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-emerald-800 dark:text-emerald-300">
+                      Proceso Finalizado
+                    </h3>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                      Este proceso ha sido aprobado y está bloqueado para nuevas subidas.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+
+            {/* Right Column - Audit History */}
+            <div className="lg:border-l lg:pl-6">
+              <div className="flex items-center gap-2 mb-4">
+                <History className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-medium">Historial de Cambios</h3>
+                {processId && (() => {
+                  const count = getAuditLog(processId).length;
+                  return count > 0 ? (
+                    <Badge variant="secondary" className="text-xs">{count}</Badge>
+                  ) : null;
+                })()}
+              </div>
+              {processId && (() => {
+                const entries = getAuditLog(processId);
+                if (entries.length === 0) {
+                  return (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No hay cambios registrados.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="relative max-h-[400px] overflow-y-auto pr-2">
+                    <div className="absolute left-[15px] top-3 bottom-3 w-px bg-border" />
+                    <div className="space-y-4">
+                      {entries.map((entry) => (
+                        <div key={entry.id} className="flex gap-3 relative" data-testid={`audit-entry-${entry.id}`}>
+                          <div className="relative z-10 mt-1 flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border-2 border-background">
+                              <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                          </div>
+                          <div className="flex-1 pb-2 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <StatusBadge status={entry.previousStatus as ProcessStatusType} size="sm" />
+                              <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <StatusBadge status={entry.newStatus as ProcessStatusType} size="sm" />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {format(new Date(entry.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                            </p>
+                            {entry.feedbackComment && (
+                              <div className="mt-1.5 p-2 bg-muted rounded-md flex gap-2">
+                                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                <p className="text-xs" data-testid={`audit-comment-${entry.id}`}>
+                                  {entry.feedbackComment}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Upload History */}
       <Card>
