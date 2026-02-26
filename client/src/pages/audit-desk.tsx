@@ -784,12 +784,8 @@ export default function AuditDesk() {
                   onClick={() => fileInputRef.current?.click()}
                   data-testid="upload-drop-zone"
                 >
-                  <File className="h-3.5 w-3.5 mr-1.5" />
-                  {uploadFileName ? (
-                    <span className="truncate max-w-[140px]">{uploadFileName}</span>
-                  ) : (
-                    "Elegir archivo"
-                  )}
+                  <File className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                  <span className="truncate max-w-[120px]">{uploadFileName || "Elegir archivo"}</span>
                 </Button>
               </div>
               {uploadDocType === "__custom__" && (
