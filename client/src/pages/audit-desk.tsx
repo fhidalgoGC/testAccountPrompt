@@ -93,6 +93,9 @@ export default function AuditDesk() {
   const [uploadFileName, setUploadFileName] = useState("");
   const [uploadComment, setUploadComment] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [visorRequestOpen, setVisorRequestOpen] = useState(false);
+  const [visorRequestDocType, setVisorRequestDocType] = useState("");
+  const [visorRequestComment, setVisorRequestComment] = useState("");
 
   const documentTypes = [
     "Facturas de Ingreso",
@@ -217,6 +220,30 @@ export default function AuditDesk() {
     setUploadCustomDocType("");
     setUploadFileName("");
     setUploadComment("");
+  };
+
+  const handleVisorRequest = () => {
+    if (!processId || !visorRequestDocType) return;
+    updateProcessStatus(
+      processId,
+      ProcessStatus.INCOMPLETE,
+      visorRequestComment.trim() || `Se solicitan documentos faltantes del visor: ${visorRequestDocType}`,
+      [visorRequestDocType]
+    );
+    toast({
+      title: "Documentos solicitados",
+      description: `Se solicitó "${visorRequestDocType}" al cliente y el proceso fue marcado como incompleto.`,
+    });
+    setVisorRequestOpen(false);
+    setVisorRequestDocType("");
+    setVisorRequestComment("");
+  };
+
+  const handleDownloadVisor = (tipoDocumento: string) => {
+    toast({
+      title: "Descarga simulada",
+      description: `En producción, aquí se descargaría el visor SAT de "${tipoDocumento}".`,
+    });
   };
 
   const handleDownloadFile = (fileName: string) => {
@@ -902,13 +929,42 @@ export default function AuditDesk() {
                                 </TableBody>
                               </Table>
                             </div>
-                            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground px-1">
-                              <span>{matched} de {total} archivos verificados</span>
-                              {!isComplete && (
-                                <span className="text-amber-600 dark:text-amber-400 font-medium">
-                                  {pending} archivo{pending !== 1 ? "s" : ""} pendiente{pending !== 1 ? "s" : ""} de entrega
-                                </span>
-                              )}
+                            <div className="mt-3 flex items-center justify-between px-1">
+                              <div className="text-xs text-muted-foreground">
+                                <span>{matched} de {total} archivos verificados</span>
+                                {!isComplete && (
+                                  <span className="ml-2 text-amber-600 dark:text-amber-400 font-medium">
+                                    — {pending} pendiente{pending !== 1 ? "s" : ""}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadVisor(visor.tipoDocumento)}
+                                  data-testid={`visor-download-${visor.id}`}
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Descargar
+                                </Button>
+                                {!isComplete && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
+                                    onClick={() => {
+                                      setVisorRequestDocType(visor.tipoDocumento);
+                                      setVisorRequestComment("");
+                                      setVisorRequestOpen(true);
+                                    }}
+                                    data-testid={`visor-request-${visor.id}`}
+                                  >
+                                    <Send className="h-4 w-4 mr-1" />
+                                    Solicitar ({pending})
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </AccordionContent>
                         </AccordionItem>
@@ -1042,6 +1098,50 @@ export default function AuditDesk() {
             <Button onClick={handleConfirmUpload} disabled={stagedEntries.length === 0} data-testid="button-confirm-upload">
               <UploadCloud className="h-4 w-4 mr-2" />
               Subir {stagedEntries.length > 0 ? `${stagedEntries.length} archivo${stagedEntries.length !== 1 ? "s" : ""}` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={visorRequestOpen} onOpenChange={(open) => {
+        setVisorRequestOpen(open);
+        if (!open) {
+          setVisorRequestDocType("");
+          setVisorRequestComment("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Solicitar Documentos</DialogTitle>
+            <DialogDescription>
+              Se solicitará al cliente los archivos faltantes y el proceso se marcará como incompleto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Tipo de Documento</label>
+              <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/50">
+                <FileSearch className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">{visorRequestDocType}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Descripción / Comentario</label>
+              <Textarea
+                placeholder="Agrega una descripción o instrucciones adicionales para el cliente..."
+                value={visorRequestComment}
+                onChange={(e) => setVisorRequestComment(e.target.value)}
+                rows={3}
+                data-testid="textarea-visor-request-comment"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVisorRequestOpen(false)} data-testid="button-cancel-visor-request">
+              Cancelar
+            </Button>
+            <Button onClick={handleVisorRequest} data-testid="button-confirm-visor-request">
+              <Send className="h-4 w-4 mr-2" />
+              Solicitar al Cliente
             </Button>
           </DialogFooter>
         </DialogContent>
