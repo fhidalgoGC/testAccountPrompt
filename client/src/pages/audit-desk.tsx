@@ -750,35 +750,25 @@ export default function AuditDesk() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Tipo de Documento</label>
-                <Select value={uploadDocType} onValueChange={(val) => {
-                  setUploadDocType(val);
-                  if (val !== "__custom__") setUploadCustomDocType("");
-                }}>
-                  <SelectTrigger data-testid="select-upload-doc-type">
-                    <SelectValue placeholder="Seleccionar tipo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {documentTypes.map((dt) => (
-                      <SelectItem key={dt} value={dt}>{dt}</SelectItem>
-                    ))}
-                    <SelectItem value="__custom__">Otro (especificar)</SelectItem>
-                  </SelectContent>
-                </Select>
-                {uploadDocType === "__custom__" && (
-                  <Input
-                    placeholder="Escribe el tipo de documento..."
-                    value={uploadCustomDocType}
-                    onChange={(e) => setUploadCustomDocType(e.target.value)}
-                    data-testid="input-custom-doc-type"
-                  />
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Archivo</label>
+            <div className="grid gap-3">
+              <div className="grid grid-cols-[1fr,auto] gap-2 items-end">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Tipo de Documento</label>
+                  <Select value={uploadDocType} onValueChange={(val) => {
+                    setUploadDocType(val);
+                    if (val !== "__custom__") setUploadCustomDocType("");
+                  }}>
+                    <SelectTrigger className="h-9" data-testid="select-upload-doc-type">
+                      <SelectValue placeholder="Seleccionar tipo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documentTypes.map((dt) => (
+                        <SelectItem key={dt} value={dt}>{dt}</SelectItem>
+                      ))}
+                      <SelectItem value="__custom__">Otro (especificar)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -787,74 +777,80 @@ export default function AuditDesk() {
                   onChange={handleFileSelected}
                   data-testid="input-file-upload"
                 />
-                <div
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed rounded-md p-3 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
                   data-testid="upload-drop-zone"
                 >
+                  <File className="h-3.5 w-3.5 mr-1.5" />
                   {uploadFileName ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <File className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium truncate">{uploadFileName}</span>
-                    </div>
+                    <span className="truncate max-w-[140px]">{uploadFileName}</span>
                   ) : (
-                    <>
-                      <UploadCloud className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground">Haz clic para seleccionar archivo (cualquier formato)</p>
-                    </>
+                    "Elegir archivo"
                   )}
-                </div>
+                </Button>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Comentario <span className="text-muted-foreground font-normal">(opcional)</span></label>
+              {uploadDocType === "__custom__" && (
                 <Input
-                  placeholder="Nota adicional sobre este archivo..."
+                  placeholder="Escribe el tipo de documento..."
+                  className="h-9"
+                  value={uploadCustomDocType}
+                  onChange={(e) => setUploadCustomDocType(e.target.value)}
+                  data-testid="input-custom-doc-type"
+                />
+              )}
+              <div className="grid grid-cols-[1fr,auto] gap-2 items-end">
+                <Input
+                  placeholder="Comentario opcional..."
+                  className="h-9"
                   value={uploadComment}
                   onChange={(e) => setUploadComment(e.target.value)}
                   data-testid="input-upload-comment"
                 />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-9"
+                  onClick={handleAddEntry}
+                  disabled={!resolvedUploadDocType || !uploadFileName}
+                  data-testid="button-add-entry"
+                >
+                  Agregar
+                </Button>
               </div>
-
-              <Button
-                variant="secondary"
-                onClick={handleAddEntry}
-                disabled={!resolvedUploadDocType || !uploadFileName}
-                className="w-full"
-                data-testid="button-add-entry"
-              >
-                Agregar a la lista
-              </Button>
             </div>
 
             {stagedEntries.length > 0 && (
-              <div className="space-y-2" data-testid="staged-files-list">
-                <p className="text-sm font-medium">{stagedEntries.length} archivo{stagedEntries.length !== 1 ? "s" : ""} listo{stagedEntries.length !== 1 ? "s" : ""} para subir:</p>
-                <div className="max-h-48 overflow-y-auto space-y-1.5">
-                  {stagedEntries.map((entry, idx) => (
-                    <div key={idx} className="flex items-start justify-between gap-2 p-2 bg-muted rounded-md" data-testid={`staged-entry-${idx}`}>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
+              <>
+                <Separator />
+                <div className="space-y-1.5" data-testid="staged-files-list">
+                  <p className="text-xs font-medium text-muted-foreground">{stagedEntries.length} archivo{stagedEntries.length !== 1 ? "s" : ""} listo{stagedEntries.length !== 1 ? "s" : ""}</p>
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {stagedEntries.map((entry, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-muted/50 group" data-testid={`staged-entry-${idx}`}>
+                        <div className="min-w-0 flex-1 flex items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">{entry.docType}</Badge>
-                          <span className="text-sm truncate">{entry.fileName}</span>
+                          <span className="text-xs truncate">{entry.fileName}</span>
+                          {entry.comment && (
+                            <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">— {entry.comment}</span>
+                          )}
                         </div>
-                        {entry.comment && (
-                          <p className="text-xs text-muted-foreground mt-0.5 pl-1">{entry.comment}</p>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => setStagedEntries((prev) => prev.filter((_, i) => i !== idx))}
+                          data-testid={`button-remove-staged-${idx}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 flex-shrink-0"
-                        onClick={() => setStagedEntries((prev) => prev.filter((_, i) => i !== idx))}
-                        data-testid={`button-remove-staged-${idx}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
           <DialogFooter>
