@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/status-badge";
 import { NewInfoAlert } from "@/components/new-info-alert";
 import { EmptyState } from "@/components/empty-state";
@@ -59,6 +60,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMockData } from "@/lib/mock-data";
 import { ProcessStatus, type ProcessStatusType } from "@shared/schema";
@@ -71,6 +80,12 @@ export default function AuditDesk() {
   const [comment, setComment] = useState("");
   const [expandedUploads, setExpandedUploads] = useState<Set<string>>(new Set());
   const [selectedDocTypes, setSelectedDocTypes] = useState<Set<string>>(new Set());
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [stagedEntries, setStagedEntries] = useState<{ docType: string; fileName: string; comment: string }[]>([]);
+  const [uploadDocType, setUploadDocType] = useState("");
+  const [uploadCustomDocType, setUploadCustomDocType] = useState("");
+  const [uploadFileName, setUploadFileName] = useState("");
+  const [uploadComment, setUploadComment] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const documentTypes = [
@@ -153,15 +168,40 @@ export default function AuditDesk() {
     });
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!processId || !event.target.files || event.target.files.length === 0) return;
-    const fileNames = Array.from(event.target.files).map((f) => f.name);
-    simulateUpload(processId, fileNames);
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    setUploadFileName(event.target.files[0].name);
+    event.target.value = "";
+  };
+
+  const resolvedUploadDocType = uploadDocType === "__custom__" ? uploadCustomDocType.trim() : uploadDocType;
+
+  const handleAddEntry = () => {
+    if (!resolvedUploadDocType || !uploadFileName) return;
+    setStagedEntries((prev) => [...prev, { docType: resolvedUploadDocType, fileName: uploadFileName, comment: uploadComment.trim() }]);
+    setUploadDocType("");
+    setUploadCustomDocType("");
+    setUploadFileName("");
+    setUploadComment("");
+  };
+
+  const handleConfirmUpload = () => {
+    if (!processId || stagedEntries.length === 0) return;
+    simulateUpload(processId, stagedEntries.map((e) => e.fileName));
     toast({
       title: "Archivos subidos",
-      description: `Se subieron ${fileNames.length} archivo(s) exitosamente.`,
+      description: `Se subieron ${stagedEntries.length} archivo(s) exitosamente.`,
     });
-    event.target.value = "";
+    setStagedEntries([]);
+    setUploadModalOpen(false);
+  };
+
+  const resetUploadModal = () => {
+    setStagedEntries([]);
+    setUploadDocType("");
+    setUploadCustomDocType("");
+    setUploadFileName("");
+    setUploadComment("");
   };
 
   const handleDownloadFile = (fileName: string) => {
@@ -250,31 +290,9 @@ export default function AuditDesk() {
 
       {/* Actions Bar */}
       <div className="flex items-center gap-3 flex-wrap">
-        {!isLocked && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".xml"
-              className="hidden"
-              onChange={handleFileUpload}
-              data-testid="input-file-upload"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="default"
-              data-testid="button-upload-files"
-            >
-              <UploadCloud className="h-4 w-4 mr-2" />
-              Subir Archivos
-            </Button>
-          </>
-        )}
         <Button
           onClick={handleDownload}
           disabled={uniqueFilesCount === 0}
-          variant={isLocked ? "default" : "outline"}
           data-testid="button-download-all"
         >
           <Download className="h-4 w-4 mr-2" />
@@ -394,6 +412,8 @@ export default function AuditDesk() {
                     )}
                   </div>
 
+                  <Separator />
+
                   <div className="flex flex-col gap-2">
                     <Button
                       variant="outline"
@@ -408,6 +428,19 @@ export default function AuditDesk() {
                     >
                       <Send className="h-4 w-4 mr-2" />
                       Enviar y Marcar como Faltan Datos
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        resetUploadModal();
+                        setUploadModalOpen(true);
+                      }}
+                      className="w-full"
+                      data-testid="button-open-upload-modal"
+                    >
+                      <UploadCloud className="h-4 w-4 mr-2" />
+                      Subir Archivos XML
                     </Button>
 
                     <AlertDialog>
@@ -705,6 +738,136 @@ export default function AuditDesk() {
           )}
         </CardContent>
       </Card>
+      <Dialog open={uploadModalOpen} onOpenChange={(open) => {
+        setUploadModalOpen(open);
+        if (!open) resetUploadModal();
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Subir Archivos</DialogTitle>
+            <DialogDescription>
+              Especifica el tipo de documento, selecciona el archivo y agrega un comentario opcional.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Tipo de Documento</label>
+                <Select value={uploadDocType} onValueChange={(val) => {
+                  setUploadDocType(val);
+                  if (val !== "__custom__") setUploadCustomDocType("");
+                }}>
+                  <SelectTrigger data-testid="select-upload-doc-type">
+                    <SelectValue placeholder="Seleccionar tipo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {documentTypes.map((dt) => (
+                      <SelectItem key={dt} value={dt}>{dt}</SelectItem>
+                    ))}
+                    <SelectItem value="__custom__">Otro (especificar)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {uploadDocType === "__custom__" && (
+                  <Input
+                    placeholder="Escribe el tipo de documento..."
+                    value={uploadCustomDocType}
+                    onChange={(e) => setUploadCustomDocType(e.target.value)}
+                    data-testid="input-custom-doc-type"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Archivo</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xml,.pdf,.xlsx,.xls,.csv,.zip"
+                  className="hidden"
+                  onChange={handleFileSelected}
+                  data-testid="input-file-upload"
+                />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed rounded-md p-3 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                  data-testid="upload-drop-zone"
+                >
+                  {uploadFileName ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <File className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium truncate">{uploadFileName}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Haz clic para seleccionar archivo</p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Comentario <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                <Input
+                  placeholder="Nota adicional sobre este archivo..."
+                  value={uploadComment}
+                  onChange={(e) => setUploadComment(e.target.value)}
+                  data-testid="input-upload-comment"
+                />
+              </div>
+
+              <Button
+                variant="secondary"
+                onClick={handleAddEntry}
+                disabled={!resolvedUploadDocType || !uploadFileName}
+                className="w-full"
+                data-testid="button-add-entry"
+              >
+                Agregar a la lista
+              </Button>
+            </div>
+
+            {stagedEntries.length > 0 && (
+              <div className="space-y-2" data-testid="staged-files-list">
+                <p className="text-sm font-medium">{stagedEntries.length} archivo{stagedEntries.length !== 1 ? "s" : ""} listo{stagedEntries.length !== 1 ? "s" : ""} para subir:</p>
+                <div className="max-h-48 overflow-y-auto space-y-1.5">
+                  {stagedEntries.map((entry, idx) => (
+                    <div key={idx} className="flex items-start justify-between gap-2 p-2 bg-muted rounded-md" data-testid={`staged-entry-${idx}`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">{entry.docType}</Badge>
+                          <span className="text-sm truncate">{entry.fileName}</span>
+                        </div>
+                        {entry.comment && (
+                          <p className="text-xs text-muted-foreground mt-0.5 pl-1">{entry.comment}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 flex-shrink-0"
+                        onClick={() => setStagedEntries((prev) => prev.filter((_, i) => i !== idx))}
+                        data-testid={`button-remove-staged-${idx}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadModalOpen(false)} data-testid="button-cancel-upload">
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmUpload} disabled={stagedEntries.length === 0} data-testid="button-confirm-upload">
+              <UploadCloud className="h-4 w-4 mr-2" />
+              Subir {stagedEntries.length > 0 ? `${stagedEntries.length} archivo${stagedEntries.length !== 1 ? "s" : ""}` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
