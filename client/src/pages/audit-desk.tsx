@@ -806,10 +806,11 @@ export default function AuditDesk() {
                   data-testid="input-custom-doc-type"
                 />
               )}
-              <div className="grid grid-cols-[1fr,auto] gap-2 items-end">
-                <Input
+              <div className="space-y-1">
+                <Textarea
                   placeholder="Comentario opcional..."
-                  className="h-9"
+                  className="min-h-[60px] resize-none text-sm"
+                  rows={2}
                   value={uploadComment}
                   onChange={(e) => setUploadComment(e.target.value)}
                   data-testid="input-upload-comment"
@@ -817,7 +818,7 @@ export default function AuditDesk() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-9"
+                  className="h-9 w-full"
                   onClick={handleAddEntry}
                   disabled={!resolvedUploadDocType || !uploadFileName}
                   data-testid="button-add-entry"
@@ -834,18 +835,20 @@ export default function AuditDesk() {
                   <p className="text-xs font-medium text-muted-foreground">{stagedEntries.length} archivo{stagedEntries.length !== 1 ? "s" : ""} listo{stagedEntries.length !== 1 ? "s" : ""}</p>
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {stagedEntries.map((entry, idx) => (
-                      <div key={idx} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-muted/50 group" data-testid={`staged-entry-${idx}`}>
-                        <div className="min-w-0 flex-1 flex items-center gap-1.5">
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">{entry.docType}</Badge>
-                          <span className="text-xs" title={entry.fileName}>{shortenFileName(entry.fileName)}</span>
+                      <div key={idx} className="flex items-start justify-between gap-2 py-1.5 px-2 rounded hover:bg-muted/50 group" data-testid={`staged-entry-${idx}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">{entry.docType}</Badge>
+                            <span className="text-xs" title={entry.fileName}>{shortenFileName(entry.fileName)}</span>
+                          </div>
                           {entry.comment && (
-                            <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">— {entry.comment}</span>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{entry.comment}</p>
                           )}
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
                           onClick={() => setStagedEntries((prev) => prev.filter((_, i) => i !== idx))}
                           data-testid={`button-remove-staged-${idx}`}
                         >
