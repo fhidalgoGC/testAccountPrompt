@@ -701,8 +701,9 @@ export default function AuditDesk() {
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>UUID</TableHead>
+                                    <TableHead>Tipo Doc.</TableHead>
                                     <TableHead>Archivo</TableHead>
+                                    <TableHead>UUID</TableHead>
                                     <TableHead>RFC Emisor</TableHead>
                                     <TableHead>RFC Receptor</TableHead>
                                     <TableHead className="text-right">Monto</TableHead>
@@ -716,11 +717,16 @@ export default function AuditDesk() {
                                       key={file.id}
                                       data-testid={`file-${file.id}`}
                                     >
+                                      <TableCell>
+                                        {file.docType ? (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">{file.docType}</Badge>
+                                        ) : "—"}
+                                      </TableCell>
+                                      <TableCell className="text-sm" title={file.fileName}>
+                                        {shortenFileName(file.fileName, 18)}
+                                      </TableCell>
                                       <TableCell className="font-mono text-xs">
                                         {file.uuid.slice(0, 8)}...
-                                      </TableCell>
-                                      <TableCell className="text-sm">
-                                        {file.fileName}
                                       </TableCell>
                                       <TableCell className="font-mono text-xs">
                                         {file.issuerRfc || "—"}

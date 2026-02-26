@@ -79,6 +79,7 @@ export const xmlFiles = pgTable("xml_files", {
   processId: varchar("process_id").notNull().references(() => processes.id),
   uuid: text("uuid").notNull(),
   fileName: text("file_name").notNull(),
+  docType: text("doc_type"),
   issuerRfc: text("issuer_rfc"),
   receiverRfc: text("receiver_rfc"),
   amount: text("amount"),
