@@ -19,6 +19,7 @@ import {
   X,
   FileQuestion,
   UploadCloud,
+  Search,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -623,15 +625,28 @@ export default function AuditDesk() {
         </CardContent>
       </Card>
 
-      {/* Upload History */}
+      {/* Upload History & Visor SAT */}
       <Card>
         <CardHeader>
-          <CardTitle>Control de Cargas (Entregas)</CardTitle>
+          <CardTitle>Documentos del Proceso</CardTitle>
           <CardDescription>
-            Historial de todas las entregas de archivos del cliente
+            Entregas de archivos del cliente y consulta de visores SAT
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Tabs defaultValue="cargas">
+            <TabsList className="mb-4">
+              <TabsTrigger value="cargas" data-testid="tab-cargas">
+                <Upload className="h-4 w-4 mr-1.5" />
+                Cargas
+              </TabsTrigger>
+              <TabsTrigger value="visor-sat" data-testid="tab-visor-sat">
+                <Search className="h-4 w-4 mr-1.5" />
+                Visor SAT
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="cargas">
           {!uploads.length ? (
             <EmptyState
               icon="files"
@@ -768,6 +783,90 @@ export default function AuditDesk() {
                 ))}
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="visor-sat">
+              {(() => {
+                const allFiles = processDetail ? processDetail.uploads.flatMap((u) => u.files) : [];
+                if (allFiles.length === 0) {
+                  return (
+                    <EmptyState
+                      icon="files"
+                      title="Sin archivos"
+                      description="No hay archivos para consultar en el visor SAT."
+                    />
+                  );
+                }
+                const uniqueFiles = allFiles.filter((file, idx, arr) =>
+                  arr.findIndex((f) => f.uuid === file.uuid) === idx
+                );
+                return (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Estado SAT</TableHead>
+                          <TableHead>Tipo Doc.</TableHead>
+                          <TableHead>UUID</TableHead>
+                          <TableHead>RFC Emisor</TableHead>
+                          <TableHead>RFC Receptor</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead>Fecha Emisión</TableHead>
+                          <TableHead>Efecto</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {uniqueFiles.map((file) => {
+                          const isCancelled = file.uuid.startsWith("D0");
+                          return (
+                            <TableRow key={file.id} data-testid={`visor-${file.id}`}>
+                              <TableCell>
+                                <Badge
+                                  variant={isCancelled ? "destructive" : "default"}
+                                  className={isCancelled ? "" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300"}
+                                >
+                                  {isCancelled ? "Cancelado" : "Vigente"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {file.docType ? (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">{file.docType}</Badge>
+                                ) : "—"}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {file.uuid.slice(0, 8)}...
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {file.issuerRfc || "—"}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {file.receiverRfc || "—"}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                Ingreso
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {file.amount
+                                  ? `$${parseFloat(file.amount).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {file.issueDate || "—"}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {isCancelled ? "Cancelación" : "Disposición"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
       <Dialog open={uploadModalOpen} onOpenChange={(open) => {
