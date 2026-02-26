@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -96,6 +97,7 @@ export default function AuditDesk() {
   const [visorRequestOpen, setVisorRequestOpen] = useState(false);
   const [visorRequestDocType, setVisorRequestDocType] = useState("");
   const [visorRequestComment, setVisorRequestComment] = useState("");
+  const [visorSelectedUuids, setVisorSelectedUuids] = useState<Record<string, Set<string>>>({});
 
   const documentTypes = [
     "Facturas de Ingreso",
@@ -222,21 +224,45 @@ export default function AuditDesk() {
     setUploadComment("");
   };
 
+  const toggleVisorUuid = (visorId: string, uuid: string) => {
+    setVisorSelectedUuids((prev) => {
+      const current = new Set(prev[visorId] || []);
+      if (current.has(uuid)) {
+        current.delete(uuid);
+      } else {
+        current.add(uuid);
+      }
+      return { ...prev, [visorId]: current };
+    });
+  };
+
+  const toggleAllMissing = (visorId: string, missingUuids: string[]) => {
+    setVisorSelectedUuids((prev) => {
+      const current = prev[visorId] || new Set();
+      const allSelected = missingUuids.every((u) => current.has(u));
+      return { ...prev, [visorId]: allSelected ? new Set() : new Set(missingUuids) };
+    });
+  };
+
+  const [visorRequestSelectedCount, setVisorRequestSelectedCount] = useState(0);
+
   const handleVisorRequest = () => {
     if (!processId || !visorRequestDocType) return;
+    const countText = visorRequestSelectedCount > 0 ? `${visorRequestSelectedCount} archivo(s)` : "documentos";
     updateProcessStatus(
       processId,
       ProcessStatus.INCOMPLETE,
-      visorRequestComment.trim() || `Se solicitan documentos faltantes del visor: ${visorRequestDocType}`,
+      visorRequestComment.trim() || `Se solicitan ${countText} faltantes del visor: ${visorRequestDocType}`,
       [visorRequestDocType]
     );
     toast({
       title: "Documentos solicitados",
-      description: `Se solicitó "${visorRequestDocType}" al cliente y el proceso fue marcado como incompleto.`,
+      description: `Se solicitaron ${countText} de "${visorRequestDocType}" al cliente.`,
     });
     setVisorRequestOpen(false);
     setVisorRequestDocType("");
     setVisorRequestComment("");
+    setVisorRequestSelectedCount(0);
   };
 
   const handleDownloadVisor = (tipoDocumento: string) => {
@@ -867,10 +893,27 @@ export default function AuditDesk() {
                             </div>
                           </AccordionTrigger>
                           <AccordionContent className="px-3">
+                            {(() => {
+                              const missingUuids = visor.archivos.filter((a) => !uploadedUuids.has(a.uuid)).map((a) => a.uuid);
+                              const selected = visorSelectedUuids[visor.id] || new Set<string>();
+                              const selectedCount = missingUuids.filter((u) => selected.has(u)).length;
+                              const allMissingSelected = missingUuids.length > 0 && missingUuids.every((u) => selected.has(u));
+                              return (
+                            <>
                             <div className="rounded-md border">
                               <Table>
                                 <TableHeader>
                                   <TableRow>
+                                    <TableHead className="w-[50px]">
+                                      {missingUuids.length > 0 && (
+                                        <Checkbox
+                                          checked={allMissingSelected}
+                                          onCheckedChange={() => toggleAllMissing(visor.id, missingUuids)}
+                                          aria-label="Seleccionar todos los faltantes"
+                                          data-testid={`visor-select-all-${visor.id}`}
+                                        />
+                                      )}
+                                    </TableHead>
                                     <TableHead className="w-[60px]">Subido</TableHead>
                                     <TableHead>Estado SAT</TableHead>
                                     <TableHead>UUID</TableHead>
@@ -884,12 +927,23 @@ export default function AuditDesk() {
                                 <TableBody>
                                   {visor.archivos.map((archivo, idx) => {
                                     const isUploaded = uploadedUuids.has(archivo.uuid);
+                                    const isSelected = selected.has(archivo.uuid);
                                     return (
                                       <TableRow
                                         key={archivo.uuid}
-                                        className={isUploaded ? "" : "bg-amber-50/50 dark:bg-amber-900/5"}
+                                        className={isSelected ? "bg-blue-50/60 dark:bg-blue-900/10" : isUploaded ? "" : "bg-amber-50/50 dark:bg-amber-900/5"}
                                         data-testid={`visor-file-${visor.id}-${idx}`}
                                       >
+                                        <TableCell className="text-center">
+                                          {!isUploaded ? (
+                                            <Checkbox
+                                              checked={isSelected}
+                                              onCheckedChange={() => toggleVisorUuid(visor.id, archivo.uuid)}
+                                              aria-label={`Seleccionar ${archivo.uuid.slice(0,8)}`}
+                                              data-testid={`visor-check-${visor.id}-${idx}`}
+                                            />
+                                          ) : null}
+                                        </TableCell>
                                         <TableCell className="text-center">
                                           {isUploaded ? (
                                             <CheckCircle2 className="h-4 w-4 text-emerald-600 mx-auto" data-testid={`check-uploaded-${archivo.uuid.slice(0,8)}`} />
@@ -953,19 +1007,24 @@ export default function AuditDesk() {
                                     size="sm"
                                     variant="outline"
                                     className="text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
+                                    disabled={selectedCount === 0}
                                     onClick={() => {
                                       setVisorRequestDocType(visor.tipoDocumento);
                                       setVisorRequestComment("");
+                                      setVisorRequestSelectedCount(selectedCount);
                                       setVisorRequestOpen(true);
                                     }}
                                     data-testid={`visor-request-${visor.id}`}
                                   >
                                     <Send className="h-4 w-4 mr-1" />
-                                    Solicitar ({pending})
+                                    Solicitar{selectedCount > 0 ? ` (${selectedCount})` : ""}
                                   </Button>
                                 )}
                               </div>
                             </div>
+                            </>
+                              );
+                            })()}
                           </AccordionContent>
                         </AccordionItem>
                       );
@@ -1113,15 +1172,18 @@ export default function AuditDesk() {
           <DialogHeader>
             <DialogTitle>Solicitar Documentos</DialogTitle>
             <DialogDescription>
-              Se solicitará al cliente los archivos faltantes y el proceso se marcará como incompleto.
+              Se solicitarán {visorRequestSelectedCount} archivo{visorRequestSelectedCount !== 1 ? "s" : ""} al cliente y el proceso se marcará como incompleto.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
               <label className="text-sm font-medium">Tipo de Documento</label>
-              <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/50">
-                <FileSearch className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{visorRequestDocType}</span>
+              <div className="flex items-center justify-between p-2.5 border rounded-md bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <FileSearch className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{visorRequestDocType}</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">{visorRequestSelectedCount} seleccionado{visorRequestSelectedCount !== 1 ? "s" : ""}</Badge>
               </div>
             </div>
             <div className="space-y-1">
