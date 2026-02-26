@@ -782,7 +782,7 @@ export default function AuditDesk() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".xml,.pdf,.xlsx,.xls,.csv,.zip"
+                  accept="*/*"
                   className="hidden"
                   onChange={handleFileSelected}
                   data-testid="input-file-upload"
@@ -800,7 +800,7 @@ export default function AuditDesk() {
                   ) : (
                     <>
                       <UploadCloud className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground">Haz clic para seleccionar archivo</p>
+                      <p className="text-xs text-muted-foreground">Haz clic para seleccionar archivo (cualquier formato)</p>
                     </>
                   )}
                 </div>
