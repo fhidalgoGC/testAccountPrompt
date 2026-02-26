@@ -176,6 +176,15 @@ export default function AuditDesk() {
 
   const resolvedUploadDocType = uploadDocType === "__custom__" ? uploadCustomDocType.trim() : uploadDocType;
 
+  const shortenFileName = (name: string, maxLen = 10) => {
+    if (name.length <= maxLen) return name;
+    const ext = name.lastIndexOf(".") > 0 ? name.slice(name.lastIndexOf(".")) : "";
+    const base = name.slice(0, name.lastIndexOf(".") > 0 ? name.lastIndexOf(".") : name.length);
+    const keep = maxLen - ext.length - 1;
+    if (keep <= 0) return name.slice(0, maxLen) + "…";
+    return base.slice(0, keep) + "…" + ext;
+  };
+
   const handleAddEntry = () => {
     if (!resolvedUploadDocType || !uploadFileName) return;
     setStagedEntries((prev) => [...prev, { docType: resolvedUploadDocType, fileName: uploadFileName, comment: uploadComment.trim() }]);
@@ -785,7 +794,7 @@ export default function AuditDesk() {
                   data-testid="upload-drop-zone"
                 >
                   <File className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                  <span className="truncate max-w-[120px]">{uploadFileName || "Elegir archivo"}</span>
+                  {uploadFileName ? shortenFileName(uploadFileName) : "Elegir archivo"}
                 </Button>
               </div>
               {uploadDocType === "__custom__" && (
@@ -828,7 +837,7 @@ export default function AuditDesk() {
                       <div key={idx} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-muted/50 group" data-testid={`staged-entry-${idx}`}>
                         <div className="min-w-0 flex-1 flex items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex-shrink-0">{entry.docType}</Badge>
-                          <span className="text-xs truncate">{entry.fileName}</span>
+                          <span className="text-xs" title={entry.fileName}>{shortenFileName(entry.fileName)}</span>
                           {entry.comment && (
                             <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">— {entry.comment}</span>
                           )}
