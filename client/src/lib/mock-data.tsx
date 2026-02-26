@@ -384,6 +384,90 @@ const initialAuditLog: AuditLogEntry[] = [
   },
 ];
 
+export interface VisorSatFile {
+  uuid: string;
+  rfcEmisor: string;
+  rfcReceptor: string;
+  nombreEmisor: string;
+  monto: string;
+  fechaEmision: string;
+  tipoComprobante: string;
+  efecto: string;
+  estadoSat: "Vigente" | "Cancelado";
+}
+
+export interface VisorSat {
+  id: string;
+  processId: string;
+  tipoDocumento: string;
+  archivos: VisorSatFile[];
+}
+
+const initialVisoresSat: VisorSat[] = [
+  {
+    id: "vs-1",
+    processId: "pr-1",
+    tipoDocumento: "Facturas de Ingreso",
+    archivos: [
+      { uuid: "A1B2C3D4-E5F6-7890-ABCD-EF1234567890", rfcEmisor: "PRO123456789", rfcReceptor: "ABC123456789", nombreEmisor: "Proveedora Nacional S.A.", monto: "15000.00", fechaEmision: "2024-01-15", tipoComprobante: "I", efecto: "Ingreso", estadoSat: "Vigente" },
+      { uuid: "B2C3D4E5-F6A7-8901-BCDE-F12345678901", rfcEmisor: "SER987654321", rfcReceptor: "ABC123456789", nombreEmisor: "Servicios Integrados", monto: "8500.50", fechaEmision: "2024-02-20", tipoComprobante: "I", efecto: "Ingreso", estadoSat: "Vigente" },
+      { uuid: "E5F6A7B8-C9D0-1234-EFAB-345678901234", rfcEmisor: "MAN012345678", rfcReceptor: "ABC123456789", nombreEmisor: "Manufacturas del Centro", monto: "12750.25", fechaEmision: "2024-05-18", tipoComprobante: "I", efecto: "Ingreso", estadoSat: "Vigente" },
+      { uuid: "F1A2B3C4-D5E6-7890-1234-AABB11223344", rfcEmisor: "COM567890123", rfcReceptor: "ABC123456789", nombreEmisor: "Comercial Zapata", monto: "6300.00", fechaEmision: "2024-03-12", tipoComprobante: "I", efecto: "Ingreso", estadoSat: "Vigente" },
+      { uuid: "A2B3C4D5-E6F7-8901-2345-BBCC22334455", rfcEmisor: "DIS890123456", rfcReceptor: "ABC123456789", nombreEmisor: "Distribuciones Rápidas", monto: "21400.00", fechaEmision: "2024-04-08", tipoComprobante: "I", efecto: "Ingreso", estadoSat: "Vigente" },
+    ],
+  },
+  {
+    id: "vs-2",
+    processId: "pr-1",
+    tipoDocumento: "Facturas de Egreso",
+    archivos: [
+      { uuid: "C3D4E5F6-A7B8-9012-CDEF-123456789012", rfcEmisor: "TEC456789012", rfcReceptor: "ABC123456789", nombreEmisor: "Tecnológica Avanzada", monto: "22300.00", fechaEmision: "2024-03-10", tipoComprobante: "E", efecto: "Egreso", estadoSat: "Vigente" },
+      { uuid: "B3C4D5E6-F7A8-9012-3456-CCDD33445566", rfcEmisor: "PAP234567890", rfcReceptor: "ABC123456789", nombreEmisor: "Papelería Industrial", monto: "4200.00", fechaEmision: "2024-02-28", tipoComprobante: "E", efecto: "Egreso", estadoSat: "Vigente" },
+      { uuid: "C4D5E6F7-A8B9-0123-4567-DDEE44556677", rfcEmisor: "SEG345678901", rfcReceptor: "ABC123456789", nombreEmisor: "Seguros del Pacífico", monto: "18900.00", fechaEmision: "2024-05-01", tipoComprobante: "E", efecto: "Egreso", estadoSat: "Cancelado" },
+    ],
+  },
+  {
+    id: "vs-3",
+    processId: "pr-1",
+    tipoDocumento: "Complementos de Pago",
+    archivos: [
+      { uuid: "D4E5F6A7-B8C9-0123-DEFA-234567890123", rfcEmisor: "LOG789012345", rfcReceptor: "ABC123456789", nombreEmisor: "Logística Exprés", monto: "5600.00", fechaEmision: "2024-04-05", tipoComprobante: "P", efecto: "Pago", estadoSat: "Vigente" },
+      { uuid: "D5E6F7A8-B9C0-1234-5678-EEFF55667788", rfcEmisor: "FIN456789012", rfcReceptor: "ABC123456789", nombreEmisor: "Financiera del Sur", monto: "9800.00", fechaEmision: "2024-06-10", tipoComprobante: "P", efecto: "Pago", estadoSat: "Vigente" },
+    ],
+  },
+  {
+    id: "vs-4",
+    processId: "pr-3",
+    tipoDocumento: "Recibos de Nómina",
+    archivos: [
+      { uuid: "F6A7B8C9-D0E1-2345-FABC-456789012345", rfcEmisor: "XYZ987654321", rfcReceptor: "EMP111222333", nombreEmisor: "Servicios Profesionales González", monto: "18500.00", fechaEmision: "2024-01-31", tipoComprobante: "N", efecto: "Nómina", estadoSat: "Vigente" },
+      { uuid: "A7B8C9D0-E1F2-3456-ABCD-567890123456", rfcEmisor: "XYZ987654321", rfcReceptor: "EMP111222333", nombreEmisor: "Servicios Profesionales González", monto: "18500.00", fechaEmision: "2024-02-29", tipoComprobante: "N", efecto: "Nómina", estadoSat: "Vigente" },
+      { uuid: "E6F7A8B9-C0D1-2345-6789-FFAA66778899", rfcEmisor: "XYZ987654321", rfcReceptor: "EMP111222333", nombreEmisor: "Servicios Profesionales González", monto: "18500.00", fechaEmision: "2024-03-31", tipoComprobante: "N", efecto: "Nómina", estadoSat: "Vigente" },
+      { uuid: "F7A8B9C0-D1E2-3456-7890-AABB77889900", rfcEmisor: "XYZ987654321", rfcReceptor: "EMP111222333", nombreEmisor: "Servicios Profesionales González", monto: "19200.00", fechaEmision: "2024-04-30", tipoComprobante: "N", efecto: "Nómina", estadoSat: "Vigente" },
+      { uuid: "A8B9C0D1-E2F3-4567-8901-BBCC88990011", rfcEmisor: "XYZ987654321", rfcReceptor: "EMP111222333", nombreEmisor: "Servicios Profesionales González", monto: "19200.00", fechaEmision: "2024-05-31", tipoComprobante: "N", efecto: "Nómina", estadoSat: "Vigente" },
+    ],
+  },
+  {
+    id: "vs-5",
+    processId: "pr-4",
+    tipoDocumento: "Facturas de Ingreso",
+    archivos: [
+      { uuid: "C9D0E1F2-A3B4-5678-CDEF-789012345678", rfcEmisor: "TRA456789012", rfcReceptor: "DEF456789012", nombreEmisor: "Transportes del Valle", monto: "8200.00", fechaEmision: "2023-06-20", tipoComprobante: "I", efecto: "Ingreso", estadoSat: "Vigente" },
+      { uuid: "B9C0D1E2-F3A4-5678-9012-CCDD99001122", rfcEmisor: "AGR567890123", rfcReceptor: "DEF456789012", nombreEmisor: "Agroindustrias López", monto: "52000.00", fechaEmision: "2023-04-15", tipoComprobante: "I", efecto: "Ingreso", estadoSat: "Vigente" },
+    ],
+  },
+  {
+    id: "vs-6",
+    processId: "pr-4",
+    tipoDocumento: "Facturas de Egreso",
+    archivos: [
+      { uuid: "B8C9D0E1-F2A3-4567-BCDE-678901234567", rfcEmisor: "MAT345678901", rfcReceptor: "DEF456789012", nombreEmisor: "Materiales del Norte", monto: "45000.00", fechaEmision: "2023-03-15", tipoComprobante: "E", efecto: "Egreso", estadoSat: "Vigente" },
+      { uuid: "D0E1F2A3-B4C5-6789-DEFA-890123456789", rfcEmisor: "INM567890123", rfcReceptor: "DEF456789012", nombreEmisor: "Inmobiliaria del Centro", monto: "35000.00", fechaEmision: "2023-08-01", tipoComprobante: "E", efecto: "Egreso", estadoSat: "Vigente" },
+      { uuid: "C0D1E2F3-A4B5-6789-0123-DDEE00112233", rfcEmisor: "ELE678901234", rfcReceptor: "DEF456789012", nombreEmisor: "Eléctrica Poniente", monto: "12500.00", fechaEmision: "2023-09-10", tipoComprobante: "E", efecto: "Egreso", estadoSat: "Cancelado" },
+    ],
+  },
+];
+
 interface MockDataContextType {
   taxpayers: Taxpayer[];
   processes: Process[];
@@ -407,6 +491,7 @@ interface MockDataContextType {
   } | undefined;
   getAuditLog: (processId: string) => AuditLogEntry[];
   getRequestedDocTypes: (processId: string) => string[];
+  getVisoresSat: (processId: string) => VisorSat[];
   getStats: () => {
     totalTaxpayers: number;
     activeProcesses: number;
@@ -643,6 +728,10 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     return [...new Set(allRequested)];
   };
 
+  const getVisoresSat = (processId: string) => {
+    return initialVisoresSat.filter((v) => v.processId === processId);
+  };
+
   const getStats = () => {
     return {
       totalTaxpayers: taxpayers.length,
@@ -671,6 +760,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         getProcessDetail,
         getAuditLog,
         getRequestedDocTypes,
+        getVisoresSat,
         getStats,
       }}
     >

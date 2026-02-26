@@ -20,6 +20,9 @@ import {
   FileQuestion,
   UploadCloud,
   Search,
+  CheckCircle2,
+  Circle,
+  FileSearch,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +46,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   Table,
   TableBody,
@@ -116,7 +120,7 @@ export default function AuditDesk() {
     });
   };
 
-  const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog, simulateUpload, getRequestedDocTypes, auditLog } = useMockData();
+  const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog, simulateUpload, getRequestedDocTypes, getVisoresSat, auditLog, xmlFiles } = useMockData();
 
   const processDetail = processId ? getProcessDetail(processId) : undefined;
 
@@ -787,82 +791,130 @@ export default function AuditDesk() {
 
             <TabsContent value="visor-sat">
               {(() => {
-                const allFiles = processDetail ? processDetail.uploads.flatMap((u) => u.files) : [];
-                if (allFiles.length === 0) {
+                const visores = processId ? getVisoresSat(processId) : [];
+                if (visores.length === 0) {
                   return (
                     <EmptyState
                       icon="files"
-                      title="Sin archivos"
-                      description="No hay archivos para consultar en el visor SAT."
+                      title="Sin visores"
+                      description="No se han cargado visores SAT para este proceso."
                     />
                   );
                 }
-                const uniqueFiles = allFiles.filter((file, idx, arr) =>
-                  arr.findIndex((f) => f.uuid === file.uuid) === idx
+                const uploadedUuids = new Set(
+                  processDetail
+                    ? processDetail.uploads.flatMap((u) => u.files).map((f) => f.uuid)
+                    : []
                 );
                 return (
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Estado SAT</TableHead>
-                          <TableHead>Tipo Doc.</TableHead>
-                          <TableHead>UUID</TableHead>
-                          <TableHead>RFC Emisor</TableHead>
-                          <TableHead>RFC Receptor</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                          <TableHead>Fecha Emisión</TableHead>
-                          <TableHead>Efecto</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {uniqueFiles.map((file) => {
-                          const isCancelled = file.uuid.startsWith("D0");
-                          return (
-                            <TableRow key={file.id} data-testid={`visor-${file.id}`}>
-                              <TableCell>
-                                <Badge
-                                  variant={isCancelled ? "destructive" : "default"}
-                                  className={isCancelled ? "" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300"}
-                                >
-                                  {isCancelled ? "Cancelado" : "Vigente"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {file.docType ? (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">{file.docType}</Badge>
-                                ) : "—"}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {file.uuid.slice(0, 8)}...
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {file.issuerRfc || "—"}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {file.receiverRfc || "—"}
-                              </TableCell>
-                              <TableCell className="text-xs">
-                                Ingreso
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {file.amount
-                                  ? `$${parseFloat(file.amount).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
-                                  : "—"}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {file.issueDate || "—"}
-                              </TableCell>
-                              <TableCell className="text-xs">
-                                {isCancelled ? "Cancelación" : "Disposición"}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <Accordion type="multiple" className="space-y-2">
+                    {visores.map((visor) => {
+                      const matched = visor.archivos.filter((a) => uploadedUuids.has(a.uuid)).length;
+                      const total = visor.archivos.length;
+                      const pending = total - matched;
+                      const isComplete = pending === 0;
+                      return (
+                        <AccordionItem key={visor.id} value={visor.id} className="border rounded-lg px-1" data-testid={`visor-accordion-${visor.id}`}>
+                          <AccordionTrigger className="hover:no-underline px-3">
+                            <div className="flex items-center gap-3 flex-1 mr-3">
+                              <FileSearch className="h-5 w-5 text-muted-foreground shrink-0" />
+                              <div className="flex flex-col items-start gap-0.5">
+                                <span className="font-medium text-sm">{visor.tipoDocumento}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {total} archivo{total !== 1 ? "s" : ""} en visor
+                                </span>
+                              </div>
+                              <div className="ml-auto flex items-center gap-2">
+                                {isComplete ? (
+                                  <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300" data-testid={`visor-status-${visor.id}`}>
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Completo
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-amber-700 bg-amber-50 hover:bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300" data-testid={`visor-status-${visor.id}`}>
+                                    <Circle className="h-3 w-3 mr-1" />
+                                    Faltan {pending} de {total}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-3">
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-[60px]">Subido</TableHead>
+                                    <TableHead>Estado SAT</TableHead>
+                                    <TableHead>UUID</TableHead>
+                                    <TableHead>RFC Emisor</TableHead>
+                                    <TableHead>Emisor</TableHead>
+                                    <TableHead className="text-right">Monto</TableHead>
+                                    <TableHead>Fecha</TableHead>
+                                    <TableHead>Efecto</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {visor.archivos.map((archivo, idx) => {
+                                    const isUploaded = uploadedUuids.has(archivo.uuid);
+                                    return (
+                                      <TableRow
+                                        key={archivo.uuid}
+                                        className={isUploaded ? "" : "bg-amber-50/50 dark:bg-amber-900/5"}
+                                        data-testid={`visor-file-${visor.id}-${idx}`}
+                                      >
+                                        <TableCell className="text-center">
+                                          {isUploaded ? (
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-600 mx-auto" data-testid={`check-uploaded-${archivo.uuid.slice(0,8)}`} />
+                                          ) : (
+                                            <Circle className="h-4 w-4 text-muted-foreground/40 mx-auto" data-testid={`check-missing-${archivo.uuid.slice(0,8)}`} />
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge
+                                            variant={archivo.estadoSat === "Cancelado" ? "destructive" : "default"}
+                                            className={archivo.estadoSat === "Cancelado" ? "" : "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300"}
+                                          >
+                                            {archivo.estadoSat}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs">
+                                          {archivo.uuid.slice(0, 8)}...
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs">
+                                          {archivo.rfcEmisor}
+                                        </TableCell>
+                                        <TableCell className="text-xs max-w-[140px] truncate">
+                                          {archivo.nombreEmisor}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          ${parseFloat(archivo.monto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                        </TableCell>
+                                        <TableCell className="text-sm">
+                                          {archivo.fechaEmision}
+                                        </TableCell>
+                                        <TableCell className="text-xs">
+                                          {archivo.efecto}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground px-1">
+                              <span>{matched} de {total} archivos verificados</span>
+                              {!isComplete && (
+                                <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                  {pending} archivo{pending !== 1 ? "s" : ""} pendiente{pending !== 1 ? "s" : ""} de entrega
+                                </span>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 );
               })()}
             </TabsContent>
