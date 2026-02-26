@@ -114,7 +114,7 @@ export default function AuditDesk() {
     });
   };
 
-  const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog, simulateUpload, getRequestedDocTypes } = useMockData();
+  const { getProcessDetail, updateProcessStatus, finalizeProcess, getAuditLog, simulateUpload, getRequestedDocTypes, auditLog } = useMockData();
 
   const processDetail = processId ? getProcessDetail(processId) : undefined;
 
@@ -196,7 +196,7 @@ export default function AuditDesk() {
 
   const handleConfirmUpload = () => {
     if (!processId || stagedEntries.length === 0) return;
-    simulateUpload(processId, stagedEntries.map((e) => e.fileName));
+    simulateUpload(processId, stagedEntries);
     toast({
       title: "Archivos subidos",
       description: `Se subieron ${stagedEntries.length} archivo(s) exitosamente.`,
@@ -449,8 +449,25 @@ export default function AuditDesk() {
                       data-testid="button-open-upload-modal"
                     >
                       <UploadCloud className="h-4 w-4 mr-2" />
-                      Subir Archivos XML
+                      Subir Archivos
                     </Button>
+                    {processId && (() => {
+                      const uploadedDocTypes = auditLog
+                        .filter((e) => e.processId === processId && e.action === "upload" && e.requestedDocTypes)
+                        .flatMap((e) => e.requestedDocTypes || []);
+                      const uniqueUploaded = [...new Set(uploadedDocTypes)];
+                      if (uniqueUploaded.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap gap-1.5" data-testid="uploaded-doc-types">
+                          {uniqueUploaded.map((docType) => (
+                            <Badge key={docType} variant="secondary" className="gap-1 text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                              <UploadCloud className="h-3 w-3" />
+                              {docType}
+                            </Badge>
+                          ))}
+                        </div>
+                      );
+                    })()}
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

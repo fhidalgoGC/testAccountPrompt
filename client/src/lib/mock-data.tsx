@@ -384,7 +384,7 @@ interface MockDataContextType {
   updateProcessStatus: (processId: string, status: string, feedbackComment?: string, requestedDocTypes?: string[]) => void;
   finalizeProcess: (processId: string) => void;
   clearNewInfoFlag: (processId: string) => void;
-  simulateUpload: (processId: string, fileNames: string[]) => void;
+  simulateUpload: (processId: string, entries: { docType: string; fileName: string; comment: string }[]) => void;
   getTaxpayerWithProcess: (taxpayerId: string) => Taxpayer & { activeProcess?: Process; lastUploadDate?: Date } | undefined;
   getProcessesForTaxpayer: (taxpayerId: string) => Process[];
   getProcessDetail: (processId: string) => {
@@ -500,7 +500,7 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const simulateUpload = (processId: string, fileNames: string[]) => {
+  const simulateUpload = (processId: string, entries: { docType: string; fileName: string; comment: string }[]) => {
     const processUploads = uploads.filter((u) => u.processId === processId);
     const nextUploadNumber = processUploads.length > 0
       ? Math.max(...processUploads.map((u) => u.uploadNumber)) + 1
@@ -515,12 +515,12 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
     };
     setUploads((prev) => [...prev, newUpload]);
 
-    const newFiles: XmlFile[] = fileNames.map((fileName) => ({
+    const newFiles: XmlFile[] = entries.map((entry) => ({
       id: generateId(),
       uploadId,
       processId,
       uuid: `${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-      fileName,
+      fileName: entry.fileName,
       issuerRfc: null,
       receiverRfc: null,
       amount: null,
@@ -528,6 +528,9 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       createdAt: new Date(),
     }));
     setXmlFiles((prev) => [...prev, ...newFiles]);
+
+    const docTypes = [...new Set(entries.map((e) => e.docType))];
+    const comments = entries.map((e) => e.comment).filter(Boolean);
 
     setAuditLog((prev) => [
       ...prev,
@@ -537,9 +540,9 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
         action: "upload" as const,
         previousStatus: null,
         newStatus: null,
-        feedbackComment: null,
-        uploadedFiles: fileNames,
-        requestedDocTypes: null,
+        feedbackComment: comments.length > 0 ? comments.join(" | ") : null,
+        uploadedFiles: entries.map((e) => e.fileName),
+        requestedDocTypes: docTypes.length > 0 ? docTypes : null,
         createdAt: new Date(),
       },
     ]);
