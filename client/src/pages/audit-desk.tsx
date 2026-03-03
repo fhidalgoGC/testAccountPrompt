@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Circle,
   FileSearch,
+  FileDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -269,6 +270,13 @@ export default function AuditDesk() {
     toast({
       title: "Descarga simulada",
       description: `En producción, aquí se descargaría el visor SAT de "${tipoDocumento}".`,
+    });
+  };
+
+  const handleDownloadVisorFiles = (tipoDocumento: string, fileCount: number) => {
+    toast({
+      title: "Descarga simulada",
+      description: `En producción, aquí se descargarían ${fileCount} archivo(s) de "${tipoDocumento}" en ZIP.`,
     });
   };
 
@@ -866,6 +874,7 @@ export default function AuditDesk() {
                       const total = visor.archivos.length;
                       const pending = total - matched;
                       const isComplete = pending === 0;
+                      const alreadyRequested = processId ? getRequestedDocTypes(processId).includes(visor.tipoDocumento) : false;
                       return (
                         <AccordionItem key={visor.id} value={visor.id} className="border rounded-lg px-1" data-testid={`visor-accordion-${visor.id}`}>
                           <AccordionTrigger className="hover:no-underline px-3">
@@ -882,6 +891,11 @@ export default function AuditDesk() {
                                   <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300" data-testid={`visor-status-${visor.id}`}>
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Completo
+                                  </Badge>
+                                ) : alreadyRequested ? (
+                                  <Badge variant="secondary" className="text-blue-700 bg-blue-50 hover:bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300" data-testid={`visor-status-${visor.id}`}>
+                                    <Send className="h-3 w-3 mr-1" />
+                                    Solicitado
                                   </Badge>
                                 ) : (
                                   <Badge variant="secondary" className="text-amber-700 bg-amber-50 hover:bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300" data-testid={`visor-status-${visor.id}`}>
@@ -905,7 +919,7 @@ export default function AuditDesk() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead className="w-[50px]">
-                                      {missingUuids.length > 0 && (
+                                      {missingUuids.length > 0 && !alreadyRequested && (
                                         <Checkbox
                                           checked={allMissingSelected}
                                           onCheckedChange={() => toggleAllMissing(visor.id, missingUuids)}
@@ -935,13 +949,15 @@ export default function AuditDesk() {
                                         data-testid={`visor-file-${visor.id}-${idx}`}
                                       >
                                         <TableCell className="text-center">
-                                          {!isUploaded ? (
+                                          {!isUploaded && !alreadyRequested ? (
                                             <Checkbox
                                               checked={isSelected}
                                               onCheckedChange={() => toggleVisorUuid(visor.id, archivo.uuid)}
                                               aria-label={`Seleccionar ${archivo.uuid.slice(0,8)}`}
                                               data-testid={`visor-check-${visor.id}-${idx}`}
                                             />
+                                          ) : !isUploaded && alreadyRequested ? (
+                                            <Send className="h-3.5 w-3.5 text-blue-500 mx-auto" data-testid={`check-requested-${archivo.uuid.slice(0,8)}`} />
                                           ) : null}
                                         </TableCell>
                                         <TableCell className="text-center">
@@ -999,10 +1015,20 @@ export default function AuditDesk() {
                                   onClick={() => handleDownloadVisor(visor.tipoDocumento)}
                                   data-testid={`visor-download-${visor.id}`}
                                 >
-                                  <Download className="h-4 w-4 mr-1" />
-                                  Descargar
+                                  <FileDown className="h-4 w-4 mr-1" />
+                                  Visor
                                 </Button>
-                                {!isComplete && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadVisorFiles(visor.tipoDocumento, matched)}
+                                  disabled={matched === 0}
+                                  data-testid={`visor-download-files-${visor.id}`}
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Archivos ({matched})
+                                </Button>
+                                {!isComplete && !alreadyRequested && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1019,6 +1045,12 @@ export default function AuditDesk() {
                                     <Send className="h-4 w-4 mr-1" />
                                     Solicitar{selectedCount > 0 ? ` (${selectedCount})` : ""}
                                   </Button>
+                                )}
+                                {!isComplete && alreadyRequested && (
+                                  <Badge variant="secondary" className="text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300 text-xs" data-testid={`visor-requested-badge-${visor.id}`}>
+                                    <Send className="h-3 w-3 mr-1" />
+                                    Ya solicitado
+                                  </Badge>
                                 )}
                               </div>
                             </div>
